@@ -4,7 +4,8 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">{{ student.full_name }}</h1>
-    {% if student.parent %}<div style="color:#64748b;font-size:14px;margin-top:4px;">Parent: {{ student.parent.full_name }}</div>{% endif %}
+    {% if student.parent %}<div style="color:#64748b;font-size:14px;margin-top:4px;">Parent: {{ student.parent.full_name
+      }}</div>{% endif %}
   </div>
   <div style="display:flex;gap:8px;">
     <a href="/students/{{ student.id }}/points/" class="btn btn-warning">+ Ball Berish</a>
@@ -17,22 +18,28 @@
 <!-- Stats row -->
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
   <div class="stat-card">
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">Total Points</div>
+    <div
+      style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">
+      Total Points</div>
     <div style="font-size:32px;font-weight:700;color:#6366f1;">{{ student.total_points }}</div>
   </div>
   <div class="stat-card">
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">Present</div>
+    <div
+      style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">
+      Present</div>
     <div style="font-size:32px;font-weight:700;color:#10b981;">{{ attendances|length }}</div>
   </div>
   <div class="stat-card">
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">Telegram</div>
+    <div
+      style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">
+      Telegram</div>
     <div style="font-size:16px;font-weight:700;margin-top:8px;">
       {% if student.parent and student.parent.telegram_id %}
-        <span style="color:#10b981;">✓ Linked</span>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">ID: {{ student.parent.telegram_id }}</div>
+      <span style="color:#10b981;">✓ Linked</span>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">ID: {{ student.parent.telegram_id }}</div>
       {% else %}
-        <span style="color:#ef4444;">Not linked</span>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Parent must /start the bot</div>
+      <span style="color:#ef4444;">Not linked</span>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Parent must /start the bot</div>
       {% endif %}
     </div>
   </div>
@@ -42,10 +49,17 @@
 
   <!-- Attendance -->
   <div class="card">
-    <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a202c;">Recent Attendance</div>
+    <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a202c;">Recent Attendance
+    </div>
     {% if attendances %}
     <table class="table">
-      <thead><tr><th>Date</th><th>Group</th><th>Status</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Group</th>
+          <th>Status</th>
+        </tr>
+      </thead>
       <tbody>
         {% for a in attendances %}
         <tr>
@@ -66,16 +80,24 @@
     <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a202c;">Points History</div>
     {% if performances %}
     <table class="table">
-      <thead><tr><th>Date</th><th>Points</th><th>Comment</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Points</th>
+          <th>Comment</th>
+        </tr>
+      </thead>
       <tbody>
         {% for p in performances %}
         <tr>
           <td style="font-weight:500;">{{ p.date }}</td>
+          <td style="font-weight:600;color:#64748b;">{{ p.get_performance_type_display }}</td>
           <td>
             {% if p.points >= 0 %}
-              <span style="font-weight:700;color:#6366f1;">+{{ p.points }} ⭐</span>
+            <span style="font-weight:700;color:#6366f1;">+{{ p.points }} ⭐</span>
             {% else %}
-              <span style="font-weight:700;color:#ef4444;">{{ p.points }} ❌</span>
+            <span style="font-weight:700;color:#ef4444;">{{ p.points }} ❌</span>
             {% endif %}
           </td>
           <td style="color:#64748b;">{{ p.comment|default:"—" }}</td>
@@ -90,6 +112,13 @@
 
 </div>
 
+<div class="card" style="margin-top:24px;">
+  <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a202c;">Activity Trend</div>
+  <div style="padding:24px;">
+    <canvas id="studentActivityChart" height="220"></canvas>
+  </div>
+</div>
+
 <!-- Personal Statistics -->
 <div style="margin-top:28px;">
   <div style="font-size:18px;font-weight:700;color:#1a202c;margin-bottom:16px;">📈 Shaxsiy Statistika</div>
@@ -97,10 +126,13 @@
 
     <!-- Weekly -->
     <div class="stat-card" style="border-top:3px solid #6366f1;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">Haftalik</div>
+      <div
+        style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
+        Haftalik</div>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:#64748b;font-size:13px;">Ball</span>
-        <span style="font-weight:700;color:{% if weekly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{ weekly_stats.points }} ⭐</span>
+        <span style="font-weight:700;color:{% if weekly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
+          weekly_stats.points }} ⭐</span>
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:#64748b;font-size:13px;">Keldi</span>
@@ -118,10 +150,13 @@
 
     <!-- Monthly -->
     <div class="stat-card" style="border-top:3px solid #10b981;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">Oylik</div>
+      <div
+        style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
+        Oylik</div>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:#64748b;font-size:13px;">Ball</span>
-        <span style="font-weight:700;color:{% if monthly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{ monthly_stats.points }} ⭐</span>
+        <span style="font-weight:700;color:{% if monthly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
+          monthly_stats.points }} ⭐</span>
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:#64748b;font-size:13px;">Keldi</span>
@@ -139,10 +174,13 @@
 
     <!-- Overall -->
     <div class="stat-card" style="border-top:3px solid #f59e0b;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">Umumiy</div>
+      <div
+        style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
+        Umumiy</div>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:#64748b;font-size:13px;">Ball</span>
-        <span style="font-weight:700;color:{% if overall_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{ overall_stats.points }} ⭐</span>
+        <span style="font-weight:700;color:{% if overall_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
+          overall_stats.points }} ⭐</span>
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:#64748b;font-size:13px;">Keldi</span>
@@ -160,4 +198,64 @@
 
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const chartData = {{ chart_data| safe }};
+  const ctx = document.getElementById('studentActivityChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: [
+        {
+          label: 'Attendance (present)',
+          data: chartData.attendance,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: 'Classwork Points',
+          data: chartData.classwork,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: 'Homework Points',
+          data: chartData.homework,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.2)',
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: 'Exam Points',
+          data: chartData.exam,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+          tension: 0.3,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+          },
+        },
+      },
+    },
+  });
+</script>
 {% endblock %}

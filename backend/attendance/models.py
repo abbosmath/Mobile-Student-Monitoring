@@ -24,9 +24,20 @@ class Attendance(models.Model):
 
 
 class Performance(models.Model):
+    PERFORMANCE_TYPE_CHOICES = [
+        ("classwork", "Classwork"),
+        ("homework", "Homework"),
+        ("exam", "Exam"),
+    ]
+
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="performances")
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     points = models.IntegerField()
+    performance_type = models.CharField(
+        max_length=12,
+        choices=PERFORMANCE_TYPE_CHOICES,
+        default="classwork",
+    )
     comment = models.TextField(blank=True)
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -35,4 +46,4 @@ class Performance(models.Model):
         ordering = ["-date"]
 
     def __str__(self):
-        return f"{self.student} +{self.points} pts"
+        return f"{self.student} {self.get_performance_type_display()} +{self.points} pts"

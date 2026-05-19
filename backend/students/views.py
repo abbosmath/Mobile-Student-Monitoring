@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Sum
 from .models import Group, Schedule, GroupMembership, Student
 from users.models import Parent
-from datetime import date
+from datetime import date, timedelta
+import json
 
 
 # ─── GROUPS ──────────────────────────────────────────────
@@ -183,14 +186,19 @@ def give_points(request, student_id):
         from attendance.models import Performance
         points = int(request.POST.get("points", 0))
         comment = request.POST.get("comment", "")
+        performance_type = request.POST.get("performance_type", "classwork")
+
+        # Update total_points FIRST before creating Performance
+        student.total_points += points
+        student.save()
+
         Performance.objects.create(
             student=student,
             points=points,
+            performance_type=performance_type,
             comment=comment,
             date=date.today(),
             teacher=request.user.teacher,
         )
-        student.total_points += points
-        student.save()
         return redirect("student_detail", student_id=student.id)
     return render(request, "students/give_points.html", {"student": student})

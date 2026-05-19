@@ -1,12 +1,14 @@
 import threading
+import json
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Sum
 from students.models import Student, GroupMembership
 from students.services.stats import student_summary, get_period_range
 from users.models import Parent
-from datetime import date
+from datetime import date, timedelta
 
 def _send_linked_notification(telegram_id, student_name):
     try:
@@ -58,18 +60,70 @@ def student_detail(request, student_id):
     attendances = Attendance.objects.filter(student=student).order_by("-date")[:20]
     performances = Performance.objects.filter(student=student).order_by("-date")[:20]
 
-    # Personal stats for detail page
-    def _stats(period):
-        s, e = get_period_range(period)
-        return student_summary(student, s, e)
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    labels = []
+    attendance_points = []
+    classwork_points = []
+    homework_points = []
+    exam_points = []
+
+    for i in range(3, -1, -1):
+        start = week_start - timedelta(weeks=i)
+        end = start + timedelta(days=6)
+        if end > today:
+            end = today
+
+        labels.append(start.strftime("%d %b"))
+        attendance_points.append(
+            Attendance.objects.filter(
+                student=student,
+                status="present",
+                date__gte=start,
+                date__lte=end,
+            ).count()
+        )
+        classwork_points.append(
+            Performance.objects.filter(
+                student=student,
+                performance_type="classwork",
+                date__gte=start,
+                date__lte=end,
+            ).aggregate(total=Sum("points"))["total"] or 0
+        )
+        homework_points.append(
+            Performance.objects.filter(
+                student=student,
+                performance_type="homework",
+                date__gte=start,
+                date__lte=end,
+            ).aggregate(total=Sum("points"))["total"] or 0
+        )
+        exam_points.append(
+            Performance.objects.filter(
+                student=student,
+                performance_type="exam",
+                date__gte=start,
+                date__lte=end,
+            ).aggregate(total=Sum("points"))["total"] or 0
+        )
+
+    chart_data = json.dumps({
+        "labels": labels,
+        "attendance": attendance_points,
+        "classwork": classwork_points,
+        "homework": homework_points,
+        "exam": exam_points,
+    })
 
     return render(request, "students/detail.html", {
         "student": student,
         "attendances": attendances,
         "performances": performances,
-        "weekly_stats": _stats("weekly"),
-        "monthly_stats": _stats("monthly"),
-        "overall_stats": _stats("overall"),
+        "weekly_stats": student_summary(student, *get_period_range("weekly")),
+        "monthly_stats": student_summary(student, *get_period_range("monthly")),
+        "overall_stats": student_summary(student, *get_period_range("overall")),
+        "chart_data": chart_data,
     })
 
 
@@ -130,6 +184,7 @@ def give_points(request, student_id):
     if request.method == "POST":
         points = int(request.POST.get("points", 0))
         comment = request.POST.get("comment", "")
+        performance_type = request.POST.get("performance_type", "classwork")
 
         # Update total_points FIRST before creating Performance
         student.total_points += points
@@ -139,6 +194,7 @@ def give_points(request, student_id):
         Performance.objects.create(
             student=student,
             points=points,
+            performance_type=performance_type,
             comment=comment,
             date=date.today(),
             teacher=request.user.teacher,
@@ -172,6 +228,7 @@ def deduct_points(request, student_id):
                 Performance.objects.create(
                     student=student,
                     points=-actual_deduction,
+                    performance_type=request.POST.get("performance_type", "classwork"),
                     comment=comment,
                     date=date.today(),
                     teacher=request.user.teacher,

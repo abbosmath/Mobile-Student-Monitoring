@@ -8,4 +8,4 @@ class AttendanceAdmin(admin.ModelAdmin):
 
 @admin.register(Performance)
 class PerformanceAdmin(admin.ModelAdmin):
-    list_display = ["student", "points", "comment", "date", "teacher"]
+    list_display = ["student", "performance_type", "points", "comment", "date", "teacher"]
