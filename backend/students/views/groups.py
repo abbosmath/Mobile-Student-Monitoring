@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from students.models import Group, Schedule, GroupMembership, Student
+from students.models import Group, Schedule, GroupMembership, Student, Payment
 
 
 @login_required
@@ -29,7 +29,17 @@ def group_create(request):
 @login_required
 def group_detail(request, group_id):
     group = get_object_or_404(Group, id=group_id, teacher=request.user.teacher)
-    memberships = group.memberships.select_related("student__parent")
+    memberships = list(group.memberships.select_related("student__parent"))
+    student_ids = [membership.student.id for membership in memberships]
+    latest_payments = {}
+    if student_ids:
+        for payment in Payment.objects.filter(student_id__in=student_ids, group=group).order_by("student_id", "-payment_date", "-created_at"):
+            if payment.student_id not in latest_payments:
+                latest_payments[payment.student_id] = payment
+
+    for membership in memberships:
+        membership.latest_payment = latest_payments.get(membership.student.id)
+
     all_students = Student.objects.exclude(memberships__group=group)
     return render(request, "groups/detail.html", {
         "group": group,
