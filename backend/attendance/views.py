@@ -26,8 +26,8 @@ def take_attendance(request, group_id):
                 date=today,
                 defaults={"status": status},
             )
-            # Signal fires on create only; manually trigger notification on update too
-            if not created:
+            # Notify parents on a real status change only.
+            if not created and existing_map.get(student.id) != status:
                 from attendance.signals import send_attendance_notification
                 send_attendance_notification(
                     Attendance,

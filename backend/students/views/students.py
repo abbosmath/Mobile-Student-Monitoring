@@ -1,14 +1,15 @@
 import threading
 import json
+from decimal import Decimal
+from datetime import date, timedelta
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Sum
-from students.models import Student, GroupMembership
+from students.models import Student, GroupMembership, Group, Payment
 from students.services.stats import student_summary, get_period_range
 from users.models import Parent
-from datetime import date, timedelta
 
 def _send_linked_notification(telegram_id, student_name):
     try:
@@ -29,6 +30,18 @@ def _send_linked_notification(telegram_id, student_name):
     except Exception as e:
         print(f"[Link notification error] {e}")
 
+
+def _send_payment_notification(telegram_id, text):
+    try:
+        import asyncio
+        from notifications.services import send_message
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(send_message(telegram_id, text))
+        loop.close()
+    except Exception as e:
+        print(f"[Payment notification error] {e}")
+
 @login_required
 def students_list(request):
     teacher = request.user.teacher
@@ -36,12 +49,21 @@ def students_list(request):
         group__teacher=teacher
     ).select_related("student__parent").order_by("student__full_name")
     seen = set()
-    students = []
+    student_rows = []
     for m in memberships:
         if m.student.id not in seen:
             seen.add(m.student.id)
-            students.append(m.student)
-    return render(request, "students/list.html", {"students": students})
+            latest_payment = Payment.objects.filter(student=m.student).order_by("-payment_date", "-created_at").first()
+            if latest_payment:
+                payment_status = latest_payment.status_label()
+            else:
+                payment_status = "No payment records"
+            student_rows.append({
+                "student": m.student,
+                "latest_payment": latest_payment,
+                "payment_status": payment_status,
+            })
+    return render(request, "students/list.html", {"students": student_rows})
 
 
 @login_required
@@ -116,10 +138,66 @@ def student_detail(request, student_id):
         "exam": exam_points,
     })
 
+    payments = Payment.objects.filter(student=student).select_related("group").order_by("-payment_date", "-created_at")[:20]
+    latest_payment = payments[0] if payments else None
+    payment_info = None
+    payment_alert = None
+
+    if latest_payment:
+        next_due = latest_payment.next_payment_date
+        days_until_due = latest_payment.days_until_due()
+        payment_info = {
+            "amount": latest_payment.amount,
+            "payment_date": latest_payment.payment_date,
+            "next_payment_date": latest_payment.next_payment_date,
+            "status": latest_payment.status_label(),
+            "group_name": latest_payment.group.name if latest_payment.group else "—",
+            "note": latest_payment.note,
+        }
+
+        if next_due is not None and student.parent and student.parent.telegram_id:
+            if days_until_due is not None and days_until_due < 0:
+                payment_alert = (
+                    f"To'lov muddati o'tib ketdi. Iltimos, {latest_payment.group.name if latest_payment.group else 'kurs'} uchun to'lovni zudlik bilan bajaring."
+                )
+                if not latest_payment.overdue_reminder_sent:
+                    parent_text = (
+                        f"⚠️ Hurmatli {student.parent.full_name.upper()},\n\n"
+                        f"Farzandingiz <b>{student.full_name}</b> ning {latest_payment.group.name if latest_payment.group else 'kurs'} uchun to'lovi {latest_payment.next_payment_date} da muddatdan o'tgan.\n"
+                        f"Iltimos, to'lovni darhol bajaring."
+                    )
+                    threading.Thread(
+                        target=_send_payment_notification,
+                        args=(student.parent.telegram_id, parent_text),
+                        daemon=True,
+                    ).start()
+                    latest_payment.overdue_reminder_sent = True
+                    latest_payment.save(update_fields=["overdue_reminder_sent"])
+            elif days_until_due is not None and 0 <= days_until_due <= 3:
+                payment_alert = (
+                    f"To'lov muddati yaqinlashmoqda: {next_due}. Iltimos, tayyor bo'ling."
+                )
+                if not latest_payment.reminder_3_days_sent:
+                    parent_text = (
+                        f"🕒 Hurmatli {student.parent.full_name.upper()},\n\n"
+                        f"Farzandingiz <b>{student.full_name}</b> ning {latest_payment.group.name if latest_payment.group else 'kurs'} uchun keyingi to'lovi {next_due} da bo'ladi.\n"
+                        f"Qolgan kunlar: {days_until_due}."
+                    )
+                    threading.Thread(
+                        target=_send_payment_notification,
+                        args=(student.parent.telegram_id, parent_text),
+                        daemon=True,
+                    ).start()
+                    latest_payment.reminder_3_days_sent = True
+                    latest_payment.save(update_fields=["reminder_3_days_sent"])
+
     return render(request, "students/detail.html", {
         "student": student,
         "attendances": attendances,
         "performances": performances,
+        "payments": payments,
+        "payment_info": payment_info,
+        "payment_alert": payment_alert,
         "weekly_stats": student_summary(student, *get_period_range("weekly")),
         "monthly_stats": student_summary(student, *get_period_range("monthly")),
         "overall_stats": student_summary(student, *get_period_range("overall")),
@@ -201,6 +279,83 @@ def give_points(request, student_id):
         )
         return redirect("student_detail", student_id=student.id)
     return render(request, "students/give_points.html", {"student": student})
+
+
+@login_required
+def add_payment(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    groups = Group.objects.filter(memberships__student=student, teacher=request.user.teacher).distinct()
+    error = None
+
+    if request.method == "POST":
+        group_id = request.POST.get("group_id")
+        amount_str = request.POST.get("amount", "0").strip()
+        payment_date_str = request.POST.get("payment_date", "").strip()
+        next_payment_date_str = request.POST.get("next_payment_date", "").strip()
+        note = request.POST.get("note", "").strip()
+
+        try:
+            amount = Decimal(amount_str)
+        except Exception:
+            amount = None
+
+        try:
+            payment_date = date.fromisoformat(payment_date_str) if payment_date_str else date.today()
+        except ValueError:
+            payment_date = None
+
+        try:
+            next_payment_date = date.fromisoformat(next_payment_date_str) if next_payment_date_str else None
+        except ValueError:
+            next_payment_date = None
+
+        if not amount or amount <= 0:
+            error = "To'lov miqdorini to'g'ri kiriting."
+        elif not payment_date:
+            error = "To'lov sanasini kiriting."
+        else:
+            group = None
+            if group_id:
+                group = Group.objects.filter(id=group_id, teacher=request.user.teacher).first()
+                if not group:
+                    error = "Tanlangan kurs topilmadi."
+
+            if not error:
+                Payment.objects.create(
+                    student=student,
+                    group=group,
+                    amount=amount,
+                    payment_date=payment_date,
+                    next_payment_date=next_payment_date,
+                    note=note,
+                )
+
+                if student.parent and student.parent.telegram_id:
+                    teacher_name = request.user.teacher.full_name if hasattr(request.user, "teacher") else "O'qituvchi"
+                    course_name = group.name if group else "kurs"
+                    next_due_text = f"Keyingi to'lov: {next_payment_date}" if next_payment_date else "Keyingi to'lov sanasi belgilanmagan."
+                    parent_text = (
+                        f"✅ Hurmatli {student.parent.full_name.upper()},\n\n"
+                        f"Farzandingiz <b>{student.full_name}</b> uchun {course_name} kursida to'lov qabul qilindi.\n"
+                        f"To'langan summa: <b>{amount}</b> UZS\n"
+                        f"To'lov sanasi: <b>{payment_date}</b>\n"
+                        f"{next_due_text}\n\n"
+                        f"Rahmat!"
+                    )
+                    threading.Thread(
+                        target=_send_payment_notification,
+                        args=(student.parent.telegram_id, parent_text),
+                        daemon=True,
+                    ).start()
+
+                return redirect("student_detail", student_id=student.id)
+
+    return render(request, "students/add_payment.html", {
+        "student": student,
+        "groups": groups,
+        "error": error,
+        "today": date.today(),
+    })
 
 
 @login_required

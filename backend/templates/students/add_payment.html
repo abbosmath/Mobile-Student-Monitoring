@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %} — Add Payment{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">To'lov qo'shish</h1>
+        <div style="color:#64748b;font-size:14px;margin-top:4px;">Student: {{ student.full_name }}</div>
+    </div>
+    <a href="/students/{{ student.id }}/" class="btn btn-ghost">Back</a>
+</div>
+
+<div class="card" style="max-width:560px;">
+    <div style="padding:24px;">
+        {% if error %}
+        <div style="background:#fee2e2;color:#b91c1c;padding:14px;border-radius:12px;margin-bottom:16px;">{{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <label style="display:block;margin-bottom:12px;">
+                Kurs
+                <select name="group_id"
+                    style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-top:6px;">
+                    <option value="">Select course</option>
+                    {% for group in groups %}
+                    <option value="{{ group.id }}">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label style="display:block;margin-bottom:12px;">
+                To'lov summasi (UZS)
+                <input name="amount" type="number" step="0.01" placeholder="100000"
+                    style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-top:6px;" />
+            </label>
+
+            <label style="display:block;margin-bottom:12px;">
+                To'lov sanasi
+                <input name="payment_date" type="date" value="{{ today|default:None }}"
+                    style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-top:6px;" />
+            </label>
+
+            <label style="display:block;margin-bottom:12px;">
+                Keyingi to'lov sanasi
+                <input name="next_payment_date" type="date"
+                    style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-top:6px;" />
+            </label>
+
+            <label style="display:block;margin-bottom:24px;">
+                Eslatma
+                <textarea name="note" rows="4"
+                    style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-top:6px;"></textarea>
+            </label>
+
+            <button type="submit" class="btn btn-primary">Save Payment</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

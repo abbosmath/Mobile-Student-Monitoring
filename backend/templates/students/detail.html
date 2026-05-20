@@ -4,11 +4,13 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">{{ student.full_name }}</h1>
-    {% if student.parent %}<div style="color:#64748b;font-size:14px;margin-top:4px;">Parent: {{ student.parent.full_name
-      }}</div>{% endif %}
+    {% if student.parent %}
+    <div style="color:#64748b;font-size:14px;margin-top:4px;">Parent: {{ student.parent.full_name }}</div>
+    {% endif %}
   </div>
-  <div style="display:flex;gap:8px;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <a href="/students/{{ student.id }}/points/" class="btn btn-warning">+ Ball Berish</a>
+    <a href="/students/{{ student.id }}/payment/" class="btn btn-success">+ To'lov</a>
     <a href="/students/{{ student.id }}/deduct/" class="btn btn-danger">− Ball Ayirish</a>
     <a href="/students/{{ student.id }}/edit/" class="btn btn-ghost">Edit</a>
     <a href="/students/{{ student.id }}/delete/" class="btn btn-danger" style="background:#dc2626;">Delete</a>
@@ -42,6 +44,43 @@
       <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Parent must /start the bot</div>
       {% endif %}
     </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:24px;padding:18px;">
+  <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:14px;font-weight:700;color:#1a202c;margin-bottom:8px;">To'lov holati</div>
+      {% if payment_info %}
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+        <div>
+          <div style="font-size:12px;color:#64748b;">Oxirgi to'lov</div>
+          <div style="font-weight:700;color:#1a202c;">{{ payment_info.payment_date }}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#64748b;">Keyingi to'lov</div>
+          <div style="font-weight:700;color:#1a202c;">{{ payment_info.next_payment_date|default:'Belgilanmagan' }}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#64748b;">Summa</div>
+          <div style="font-weight:700;color:#1a202c;">{{ payment_info.amount }} UZS</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#64748b;">Kurs</div>
+          <div style="font-weight:700;color:#1a202c;">{{ payment_info.group_name }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div style="color:#475569;">Hozircha to'lov ma'lumotlari yo'q. To'lov qo'shish uchun yuqoridagi tugmani bosing.
+      </div>
+      {% endif %}
+    </div>
+    {% if payment_alert %}
+    <div style="background:#f8fafc;color:#1e3a8a;padding:16px;border-radius:12px;max-width:400px;">
+      <div style="font-weight:700;margin-bottom:6px;">Eslatma</div>
+      <div>{{ payment_alert }}</div>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -113,149 +152,182 @@
 </div>
 
 <div class="card" style="margin-top:24px;">
+  <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a202c;">Payment History</div>
+  {% if payments %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Course</th>
+        <th>Amount</th>
+        <th>Next Due</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td style="font-weight:500;">{{ p.payment_date }}</td>
+        <td style="color:#64748b;">{% if p.group %}{{ p.group.name }}{% else %}—{% endif %}</td>
+        <td style="font-weight:700;color:#1a202c;">{{ p.amount }} UZS</td>
+        <td>{{ p.next_payment_date|default:'—' }}</td>
+        <td style="color:#64748b;">{{ p.note|default:'—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:32px;text-align:center;color:#94a3b8;font-size:14px;">No payment records yet.</div>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-top:24px;">
   <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a202c;">Activity Trend</div>
-  <div style="padding:24px;">
-    <canvas id="studentActivityChart" height="220"></canvas>
-  </div>
-</div>
+  <div style="padding:24px;max-width:760px;margin:0 auto;overflow:hidden;">
+    <div style="position:relative;height:220px;min-height:220px;">
+      <canvas id="studentActivityChart" style="width:100%;height:100%;max-height:280px;"></canvas>
+    </div>
 
-<!-- Personal Statistics -->
-<div style="margin-top:28px;">
-  <div style="font-size:18px;font-weight:700;color:#1a202c;margin-bottom:16px;">📈 Shaxsiy Statistika</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+    <!-- Personal Statistics -->
+    <div style="margin-top:28px;">
+      <div style="font-size:18px;font-weight:700;color:#1a202c;margin-bottom:16px;">📈 Shaxsiy Statistika</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
 
-    <!-- Weekly -->
-    <div class="stat-card" style="border-top:3px solid #6366f1;">
-      <div
-        style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
-        Haftalik</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Ball</span>
-        <span style="font-weight:700;color:{% if weekly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
-          weekly_stats.points }} ⭐</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Keldi</span>
-        <span style="font-weight:600;color:#10b981;">{{ weekly_stats.present }}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Kechikdi</span>
-        <span style="font-weight:600;color:#f59e0b;">{{ weekly_stats.late }}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;">
-        <span style="color:#64748b;font-size:13px;">Kelmadi</span>
-        <span style="font-weight:600;color:#ef4444;">{{ weekly_stats.absent }}</span>
+        <!-- Weekly -->
+        <div class="stat-card" style="border-top:3px solid #6366f1;">
+          <div
+            style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
+            Haftalik</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Ball</span>
+            <span style="font-weight:700;color:{% if weekly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
+              weekly_stats.points }} ⭐</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Keldi</span>
+            <span style="font-weight:600;color:#10b981;">{{ weekly_stats.present }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Kechikdi</span>
+            <span style="font-weight:600;color:#f59e0b;">{{ weekly_stats.late }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;font-size:13px;">Kelmadi</span>
+            <span style="font-weight:600;color:#ef4444;">{{ weekly_stats.absent }}</span>
+          </div>
+        </div>
+
+        <!-- Monthly -->
+        <div class="stat-card" style="border-top:3px solid #10b981;">
+          <div
+            style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
+            Oylik</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Ball</span>
+            <span
+              style="font-weight:700;color:{% if monthly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
+              monthly_stats.points }} ⭐</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Keldi</span>
+            <span style="font-weight:600;color:#10b981;">{{ monthly_stats.present }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Kechikdi</span>
+            <span style="font-weight:600;color:#f59e0b;">{{ monthly_stats.late }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;font-size:13px;">Kelmadi</span>
+            <span style="font-weight:600;color:#ef4444;">{{ monthly_stats.absent }}</span>
+          </div>
+        </div>
+
+        <!-- Overall -->
+        <div class="stat-card" style="border-top:3px solid #f59e0b;">
+          <div
+            style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
+            Umumiy</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Ball</span>
+            <span
+              style="font-weight:700;color:{% if overall_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
+              overall_stats.points }} ⭐</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Keldi</span>
+            <span style="font-weight:600;color:#10b981;">{{ overall_stats.present }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="color:#64748b;font-size:13px;">Kechikdi</span>
+            <span style="font-weight:600;color:#f59e0b;">{{ overall_stats.late }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;font-size:13px;">Kelmadi</span>
+            <span style="font-weight:600;color:#ef4444;">{{ overall_stats.absent }}</span>
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <!-- Monthly -->
-    <div class="stat-card" style="border-top:3px solid #10b981;">
-      <div
-        style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
-        Oylik</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Ball</span>
-        <span style="font-weight:700;color:{% if monthly_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
-          monthly_stats.points }} ⭐</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Keldi</span>
-        <span style="font-weight:600;color:#10b981;">{{ monthly_stats.present }}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Kechikdi</span>
-        <span style="font-weight:600;color:#f59e0b;">{{ monthly_stats.late }}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;">
-        <span style="color:#64748b;font-size:13px;">Kelmadi</span>
-        <span style="font-weight:600;color:#ef4444;">{{ monthly_stats.absent }}</span>
-      </div>
-    </div>
-
-    <!-- Overall -->
-    <div class="stat-card" style="border-top:3px solid #f59e0b;">
-      <div
-        style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:12px;">
-        Umumiy</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Ball</span>
-        <span style="font-weight:700;color:{% if overall_stats.points >= 0 %}#6366f1{% else %}#ef4444{% endif %};">{{
-          overall_stats.points }} ⭐</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Keldi</span>
-        <span style="font-weight:600;color:#10b981;">{{ overall_stats.present }}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#64748b;font-size:13px;">Kechikdi</span>
-        <span style="font-weight:600;color:#f59e0b;">{{ overall_stats.late }}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;">
-        <span style="color:#64748b;font-size:13px;">Kelmadi</span>
-        <span style="font-weight:600;color:#ef4444;">{{ overall_stats.absent }}</span>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const chartData = {{ chart_data| safe }};
-  const ctx = document.getElementById('studentActivityChart').getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: chartData.labels,
-      datasets: [
-        {
-          label: 'Attendance (present)',
-          data: chartData.attendance,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.2)',
-          tension: 0.3,
-          fill: true,
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const chartData = {{ chart_data| safe }};
+      const ctx = document.getElementById('studentActivityChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [
+            {
+              label: 'Attendance (present)',
+              data: chartData.attendance,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              tension: 0.3,
+              fill: true,
+            },
+            {
+              label: 'Classwork Points',
+              data: chartData.classwork,
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.2)',
+              tension: 0.3,
+              fill: true,
+            },
+            {
+              label: 'Homework Points',
+              data: chartData.homework,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+              tension: 0.3,
+              fill: true,
+            },
+            {
+              label: 'Exam Points',
+              data: chartData.exam,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              tension: 0.3,
+              fill: true,
+            },
+          ],
         },
-        {
-          label: 'Classwork Points',
-          data: chartData.classwork,
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99, 102, 241, 0.2)',
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: 'Homework Points',
-          data: chartData.homework,
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245, 158, 11, 0.2)',
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: 'Exam Points',
-          data: chartData.exam,
-          borderColor: '#ef4444',
-          backgroundColor: 'rgba(239, 68, 68, 0.2)',
-          tension: 0.3,
-          fill: true,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'top' },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0,
+              },
+            },
           },
         },
-      },
-    },
-  });
-</script>
-{% endblock %}
+      });
+    </script>
+    {% endblock %}

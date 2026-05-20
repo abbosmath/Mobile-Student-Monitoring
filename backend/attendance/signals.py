@@ -1,7 +1,18 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from .models import Attendance, Performance
 import threading
+
+
+@receiver(pre_save, sender=Attendance)
+def cache_attendance_status(sender, instance, **kwargs):
+    if not instance.pk:
+        return
+    try:
+        previous = sender.objects.get(pk=instance.pk)
+        instance._previous_status = previous.status
+    except sender.DoesNotExist:
+        instance._previous_status = None
 
 
 def _notify(telegram_id, text):
@@ -19,7 +30,9 @@ def _notify(telegram_id, text):
 @receiver(post_save, sender=Attendance)
 def send_attendance_notification(sender, instance, created, **kwargs):
     if not created and not kwargs.get("notify_on_update", False):
-        return
+        previous_status = getattr(instance, "_previous_status", None)
+        if previous_status == instance.status:
+            return
     student = instance.student
     parent = student.parent
     if not parent or not parent.telegram_id:

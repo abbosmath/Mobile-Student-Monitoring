@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import date
 from users.models import Parent, Teacher
 
 
@@ -52,3 +53,37 @@ class GroupMembership(models.Model):
 
     def __str__(self):
         return f"{self.student.full_name} in {self.group.name}"
+
+
+class Payment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="payments")
+    group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, related_name="payments")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateField()
+    next_payment_date = models.DateField(null=True, blank=True)
+    note = models.TextField(blank=True)
+    reminder_3_days_sent = models.BooleanField(default=False)
+    overdue_reminder_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.full_name} payment {self.amount} on {self.payment_date}"
+
+    def days_until_due(self):
+        if not self.next_payment_date:
+            return None
+        return (self.next_payment_date - date.today()).days
+
+    def status_label(self):
+        if not self.next_payment_date:
+            return "Next payment date not set"
+        days = self.days_until_due()
+        if days is None:
+            return "Next payment date not set"
+        if days < 0:
+            return f"Overdue by {-days} days"
+        if days == 0:
+            return "Due today"
+        if days <= 3:
+            return f"Due in {days} days"
+        return f"Next due in {days} days"
