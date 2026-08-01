@@ -29,9 +29,18 @@ from students.models import MarketItem, MarketOrder, Student
 from attendance.models import Performance
 from students.services.stats import student_summary, get_period_range
 from django.conf import settings
-import os
+import socket
 
-load_dotenv()
+def _ensure_single_instance():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("127.0.0.1", 47382))
+        return s
+    except socket.error:
+        print("⚠️ Duplicate bot.py instance detected. Exiting this duplicate process.")
+        sys.exit(0)
+
+_bot_lock_socket = _ensure_single_instance()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN") or getattr(settings, "BOT_TOKEN", "")
 if not BOT_TOKEN:
