@@ -16,9 +16,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 import django
 django.setup()
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, URLInputFile
-from aiogram.filters import Command
+from aiogram.filters import Command, or_f
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from asgiref.sync import sync_to_async
@@ -156,8 +156,7 @@ def get_stats_for_parent(telegram_id):
         return None, "❌ Siz tizimda ro'yxatdan o'tmagansiz.\n/start buyrug'ini yuboring."
 
 
-@dp.message(Command("stats"))
-@dp.message(lambda msg: msg.text == "📊 Statistika")
+@dp.message(or_f(Command("stats"), F.text == "📊 Statistika"))
 async def cmd_stats(message: Message):
     parent, text = await get_stats_for_parent(message.from_user.id)
     await message.answer(text, parse_mode="HTML", reply_markup=get_main_keyboard())
@@ -244,8 +243,7 @@ def get_full_image_url(item):
     return f"{domain.rstrip('/')}{url}"
 
 
-@dp.message(Command("market"))
-@dp.message(lambda msg: msg.text == "🛒 Do'kon")
+@dp.message(or_f(Command("market"), F.text == "🛒 Do'kon"))
 async def cmd_market(message: Message):
     parent, children, items, err = await get_market_data_for_parent(message.from_user.id)
     if err:
