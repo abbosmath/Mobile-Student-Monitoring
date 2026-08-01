@@ -45,9 +45,20 @@ def _send_payment_notification(telegram_id, text):
 @login_required
 def students_list(request):
     teacher = request.user.teacher
+    q = request.GET.get("q", "").strip()
+
     memberships = GroupMembership.objects.filter(
         group__teacher=teacher
     ).select_related("student__parent").order_by("student__full_name")
+
+    if q:
+        from django.db.models import Q
+        memberships = memberships.filter(
+            Q(student__full_name__icontains=q) |
+            Q(student__parent__full_name__icontains=q) |
+            Q(student__parent__phone__icontains=q)
+        )
+
     seen = set()
     student_rows = []
     for m in memberships:
@@ -63,7 +74,8 @@ def students_list(request):
                 "latest_payment": latest_payment,
                 "payment_status": payment_status,
             })
-    return render(request, "students/list.html", {"students": student_rows})
+    return render(request, "students/list.html", {"students": student_rows, "q": q})
+
 
 
 @login_required

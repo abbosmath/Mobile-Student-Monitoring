@@ -2,18 +2,30 @@
 {% block title %} — Students{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1 class="page-title">Students</h1>
-  <a href="/students/create/" class="btn btn-primary">
-    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-    </svg>
-    New Student
-  </a>
+  <div>
+    <h1 class="page-title">Students</h1>
+    <div style="color:#64748b;font-size:14px;margin-top:4px;">O'quvchilar ro'yxati va zudlik bilan qidiruv</div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <!-- Instant Live Search Bar -->
+    <div style="position:relative;width:280px;">
+      <input type="text" id="studentSearchInput" placeholder="🔍 O'quvchi yoki ota-onasini qidirish..."
+             value="{{ q|default:'' }}"
+             class="input" style="padding-left:36px;font-size:14px;border-radius:8px;">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none;">🔍</span>
+    </div>
+    <a href="/students/create/" class="btn btn-primary">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+      New Student
+    </a>
+  </div>
 </div>
 
 {% if students %}
 <div class="card">
-  <table class="table">
+  <table class="table" id="studentsTable">
     <thead>
       <tr>
         <th>Student</th>
@@ -26,7 +38,9 @@
     </thead>
     <tbody>
       {% for row in students %}
-      <tr>
+      <tr class="student-table-row"
+          data-student-name="{{ row.student.full_name|lower }}"
+          data-parent-name="{% if row.student.parent %}{{ row.student.parent.full_name|lower }}{% endif %}">
         <td>
           <a href="/students/{{ row.student.id }}/" style="font-weight:600;color:#1a202c;text-decoration:none;">
             {{ row.student.full_name }}
@@ -70,6 +84,9 @@
       {% endfor %}
     </tbody>
   </table>
+  <div id="noSearchResults" style="display:none;padding:40px;text-align:center;color:#94a3b8;">
+    🔍 Qidiruv bo'yicha hech qanday o'quvchi topilmadi.
+  </div>
 </div>
 {% else %}
 <div class="card" style="padding:60px;text-align:center;">
@@ -79,4 +96,34 @@
   <a href="/students/create/" class="btn btn-primary">Add First Student</a>
 </div>
 {% endif %}
-{% endblock %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const searchInput = document.getElementById("studentSearchInput");
+  if (!searchInput) return;
+
+  searchInput.addEventListener("input", function() {
+    const query = this.value.toLowerCase().trim();
+    const rows = document.querySelectorAll(".student-table-row");
+    let visibleCount = 0;
+
+    rows.forEach(function(row) {
+      const studentName = row.getAttribute("data-student-name") || "";
+      const parentName = row.getAttribute("data-parent-name") || "";
+
+      if (studentName.includes(query) || parentName.includes(query)) {
+        row.style.display = "";
+        visibleCount++;
+      } else {
+        row.style.display = "none";
+      }
+    });
+
+    const noResults = document.getElementById("noSearchResults");
+    if (noResults) {
+      noResults.style.display = (visibleCount === 0 && rows.length > 0) ? "block" : "none";
+    }
+  });
+});
+</script>
+{% endblock %}
