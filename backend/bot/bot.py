@@ -229,6 +229,16 @@ def process_market_purchase(telegram_id, item_id, child_id):
         return False, f"❌ Xatolik yuz berdi: {str(e)}"
 
 
+def get_full_image_url(item):
+    url = item.get_image_display_url()
+    if not url:
+        return None
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    domain = os.getenv("HOST_DOMAIN", "https://student-monitoring-production.up.railway.app")
+    return f"{domain.rstrip('/')}{url}"
+
+
 @dp.message(Command("market"))
 @dp.message(lambda msg: msg.text == "🛒 Do'kon")
 async def cmd_market(message: Message):
@@ -237,24 +247,28 @@ async def cmd_market(message: Message):
         await message.answer(err, parse_mode="HTML", reply_markup=get_main_keyboard())
         return
 
-    text_lines = ["🛒 <b>GAMIFICATION DO'KONI (MARKET)</b>\n"]
+    summary_lines = ["🛒 <b>GAMIFICATION DO'KONI (MARKET)</b>\n"]
     for child in children:
-        text_lines.append(f"👤 <b>{child.full_name}</b>: {child.total_points} ⭐")
+        summary_lines.append(f"👤 <b>{child.full_name}</b>: {child.total_points} ⭐")
+    summary_lines.append("\n🎁 <b>Mavjud Mahsulot va Chegirmalar:</b>")
 
-    text_lines.append("\n🎁 <b>Mavjud Mahsulot va Chegirmalar:</b>\n")
+    await message.answer("\n".join(summary_lines), parse_mode="HTML", reply_markup=get_main_keyboard())
 
-    inline_keyboard_rows = []
     for item in items:
         icon = "🏷️" if item.item_type == "discount" else "📦"
         discount_info = f" ({item.discount_percent}% chegirma)" if item.discount_percent else ""
-        text_lines.append(
+        desc = f"\n📝 <i>{item.description}</i>" if item.description else ""
+
+        caption = (
             f"{icon} <b>{item.title}</b>{discount_info}\n"
-            f"   Narxi: <b>{item.points_cost} ⭐</b> | Qoldiq: {item.quantity} ta\n"
+            f"💰 Narxi: <b>{item.points_cost} ⭐</b> | Qoldiq: <b>{item.quantity} ta</b>{desc}"
         )
+
+        inline_keyboard_rows = []
         for child in children:
-            btn_text = f"Xarid qilish: {item.title} ({item.points_cost} ⭐)"
+            btn_text = f"🛒 Xarid qilish: {item.title} ({item.points_cost} ⭐)"
             if len(children) > 1:
-                btn_text = f"{child.full_name}: {item.title} ({item.points_cost} ⭐)"
+                btn_text = f"🛒 {child.full_name}: {item.title} ({item.points_cost} ⭐)"
             inline_keyboard_rows.append([
                 InlineKeyboardButton(
                     text=btn_text,
@@ -262,8 +276,31 @@ async def cmd_market(message: Message):
                 )
             ])
 
-    reply_markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_rows)
-    await message.answer("\n".join(text_lines), parse_mode="HTML", reply_markup=reply_markup)
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_rows)
+        image_url = get_full_image_url(item)
+
+        if image_url:
+            try:
+                await message.answer_photo(
+                    photo=image_url,
+                    caption=caption,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
+            except Exception as e:
+                print(f"[Bot image send error for {item.title}]: {e}")
+                await message.answer(
+                    text=caption,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
+        else:
+            await message.answer(
+                text=caption,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+
 
 
 @dp.callback_query(lambda c: c.data and c.data.startswith("buy_item:"))
