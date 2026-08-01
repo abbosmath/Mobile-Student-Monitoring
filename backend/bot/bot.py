@@ -17,7 +17,7 @@ import django
 django.setup()
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, URLInputFile
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
@@ -277,12 +277,24 @@ async def cmd_market(message: Message):
             ])
 
         reply_markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_rows)
-        image_url = get_full_image_url(item)
 
-        if image_url:
+        photo = None
+        if item.image:
+            try:
+                if os.path.exists(item.image.path):
+                    photo = FSInputFile(item.image.path)
+            except Exception:
+                photo = None
+
+        if not photo:
+            image_url = get_full_image_url(item)
+            if image_url:
+                photo = URLInputFile(image_url) if image_url.startswith("http") else image_url
+
+        if photo:
             try:
                 await message.answer_photo(
-                    photo=image_url,
+                    photo=photo,
                     caption=caption,
                     parse_mode="HTML",
                     reply_markup=reply_markup
