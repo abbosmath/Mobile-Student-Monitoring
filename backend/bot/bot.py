@@ -295,6 +295,7 @@ async def main():
     while True:
         try:
             print("🤖 Bot ishga tushdi...")
+            await bot.delete_webhook(drop_pending_updates=True)
             await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
         except Exception as e:
             print(f"Bot crashed: {e}")
