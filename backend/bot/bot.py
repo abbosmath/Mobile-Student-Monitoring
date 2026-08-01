@@ -28,11 +28,15 @@ from users.models import Parent
 from students.models import MarketItem, MarketOrder, Student
 from attendance.models import Performance
 from students.services.stats import student_summary, get_period_range
+from django.conf import settings
 import os
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", getattr(settings, "BOT_TOKEN", ""))
+BOT_TOKEN = os.getenv("BOT_TOKEN") or getattr(settings, "BOT_TOKEN", "")
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN is not set in environment variables or settings!")
+
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
