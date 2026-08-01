@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %} — Market{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">🛒 Market (Gamification Do'kon)</h1>
+    <div style="color:#64748b;font-size:14px;margin-top:4px;">
+      O'quvchilar uchun sovrinlar, mahsulotlar va dars chegirmalarini boshqarish
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <a href="{% url 'market_orders_list' %}" class="btn btn-ghost" style="position:relative;">
+      📋 Buyurtmalar
+      {% if pending_orders_count > 0 %}
+      <span style="background:#ef4444;color:white;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px;">
+        {{ pending_orders_count }} kutilmoqda
+      </span>
+      {% endif %}
+    </a>
+    <a href="{% url 'market_item_create' %}" class="btn btn-primary">
+      + Yangi Mahsulot / Chegirma
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-weight:700;color:#1a202c;">📦 Mavjud Mahsulotlar va Chegirmalar</div>
+    <div style="font-size:13px;color:#64748b;">Jami: {{ items|length }} ta</div>
+  </div>
+
+  {% if items %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px;padding:20px;">
+    {% for item in items %}
+    <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:white;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,0.05);position:relative;">
+
+      <!-- Image or Icon -->
+      <div style="height:140px;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
+        {% if item.get_image_display_url %}
+        <img src="{{ item.get_image_display_url }}" alt="{{ item.title }}" style="width:100%;height:100%;object-fit:cover;">
+        {% else %}
+        <div style="font-size:48px;">
+          {% if item.item_type == 'discount' %}🏷️{% else %}🎁{% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Type badge -->
+        <div style="position:absolute;top:10px;left:10px;">
+          {% if item.item_type == 'discount' %}
+          <span class="badge" style="background:#dbeafe;color:#1e40af;font-weight:700;">
+            🏷️ {{ item.discount_percent }}% Chegirma
+          </span>
+          {% else %}
+          <span class="badge" style="background:#fef3c7;color:#92400e;font-weight:700;">
+            📦 Mahsulot
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Status badge -->
+        <div style="position:absolute;top:10px;right:10px;">
+          {% if item.is_active %}
+          <span class="badge badge-present">Faol</span>
+          {% else %}
+          <span class="badge badge-absent">Nofaol</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Item Content -->
+      <div style="padding:16px;flex:1;display:flex;flex-direction:column;">
+        <h3 style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:6px;">{{ item.title }}</h3>
+
+        {% if item.description %}
+        <p style="font-size:13px;color:#64748b;margin-bottom:12px;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+          {{ item.description }}
+        </p>
+        {% else %}
+        <div style="flex:1;"></div>
+        {% endif %}
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+          <div>
+            <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Narxi</div>
+            <div style="font-size:20px;font-weight:700;color:#6366f1;">{{ item.points_cost }} ⭐</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Qoldiq</div>
+            <div style="font-size:16px;font-weight:700;color:#334155;">{{ item.quantity }} ta</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <a href="{% url 'market_item_edit' item.id %}" class="btn btn-ghost" style="flex:1;justify-content:center;font-size:13px;padding:6px 12px;">
+            ✏️ Tahrirlash
+          </a>
+          <form method="post" action="{% url 'market_item_delete' item.id %}" style="margin:0;" onsubmit="return confirm('Haqiqatan ham {{ item.title }} ni o\'chirmoqchimisiz?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" style="font-size:13px;padding:6px 12px;">
+              🗑️
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="padding:48px;text-align:center;color:#94a3b8;">
+    <div style="font-size:48px;margin-bottom:12px;">🛍️</div>
+    <div style="font-size:16px;font-weight:600;color:#475569;">Hali biror mahsulot yoki chegirma qo'shilmadi</div>
+    <div style="font-size:14px;color:#94a3b8;margin-top:4px;margin-bottom:20px;">
+      O'quvchilar ballariga xarid qilishlari uchun yangi mahsulot qo'shing.
+    </div>
+    <a href="{% url 'market_item_create' %}" class="btn btn-primary">+ Yangi Mahsulot Qo'shish</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %} — Market Buyurtmalari{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📋 Market Buyurtmalari ("Kim nimani oldi")</h1>
+    <div style="color:#64748b;font-size:14px;margin-top:4px;">
+      O'quvchilar tomonidan Telegram bot orqali xarid qilingan mahsulotlar va chegirmalar
+    </div>
+  </div>
+  <a href="{% url 'market_items_list' %}" class="btn btn-ghost">← Do'kon Boshqaruvi</a>
+</div>
+
+<!-- Status Filters -->
+<div style="display:flex;gap:8px;margin-bottom:20px;">
+  <a href="?status=all" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-ghost{% endif %}" style="font-size:13px;padding:6px 14px;">
+    Barchasi
+  </a>
+  <a href="?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-ghost{% endif %}" style="font-size:13px;padding:6px 14px;position:relative;">
+    ⏳ Kutilmoqda
+    {% if pending_count > 0 %}
+    <span style="background:#ef4444;color:white;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;">
+      {{ pending_count }}
+    </span>
+    {% endif %}
+  </a>
+  <a href="?status=approved" class="btn {% if status_filter == 'approved' %}btn-primary{% else %}btn-ghost{% endif %}" style="font-size:13px;padding:6px 14px;">
+    ✅ Tasdiqlandi
+  </a>
+  <a href="?status=delivered" class="btn {% if status_filter == 'delivered' %}btn-primary{% else %}btn-ghost{% endif %}" style="font-size:13px;padding:6px 14px;">
+    🎁 Topshirildi
+  </a>
+  <a href="?status=cancelled" class="btn {% if status_filter == 'cancelled' %}btn-primary{% else %}btn-ghost{% endif %}" style="font-size:13px;padding:6px 14px;">
+    ❌ Bekor qilindi
+  </a>
+</div>
+
+<div class="card">
+  <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a202c;">
+    📦 Xaridlar Ro'yxati
+  </div>
+
+  {% if orders %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Sana</th>
+        <th>O'quvchi</th>
+        <th>Mahsulot / Chegirma</th>
+        <th>Sarflangan Ball</th>
+        <th>Holati</th>
+        <th>Amallar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <td style="font-size:13px;color:#64748b;">
+          {{ order.created_at|date:"d.m.Y H:i" }}
+        </td>
+        <td>
+          <a href="/students/{{ order.student.id }}/" style="font-weight:700;color:#1e293b;text-decoration:none;">
+            {{ order.student.full_name }}
+          </a>
+          {% if order.student.parent %}
+          <div style="font-size:11px;color:#94a3b8;">Ota-onasi: {{ order.student.parent.full_name }}</div>
+          {% endif %}
+        </td>
+        <td>
+          <div style="font-weight:600;color:#1e293b;">
+            {% if order.item.item_type == 'discount' %}🏷️{% else %}📦{% endif %}
+            {{ order.item.title }}
+          </div>
+          {% if order.item.discount_percent %}
+          <div style="font-size:11px;color:#2563eb;">{{ order.item.discount_percent }}% chegirma</div>
+          {% endif %}
+        </td>
+        <td>
+          <span style="font-weight:700;color:#6366f1;">−{{ order.points_spent }} ⭐</span>
+        </td>
+        <td>
+          {% if order.status == 'pending' %}
+          <span class="badge badge-late">⏳ Kutilmoqda</span>
+          {% elif order.status == 'approved' %}
+          <span class="badge" style="background:#dbeafe;color:#1e40af;">✅ Tasdiqlandi</span>
+          {% elif order.status == 'delivered' %}
+          <span class="badge badge-present">🎁 Topshirildi</span>
+          {% elif order.status == 'cancelled' %}
+          <span class="badge badge-absent">❌ Bekor qilindi</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="post" action="{% url 'market_order_update_status' order.id %}" style="display:flex;gap:4px;margin:0;">
+            {% csrf_token %}
+            {% if order.status == 'pending' %}
+            <button type="submit" name="status" value="approved" class="btn btn-primary" style="font-size:11px;padding:4px 8px;">
+              Tasdiqlash
+            </button>
+            <button type="submit" name="status" value="delivered" class="btn btn-success" style="font-size:11px;padding:4px 8px;">
+              Topshirish
+            </button>
+            <button type="submit" name="status" value="cancelled" class="btn btn-danger" style="font-size:11px;padding:4px 8px;" onclick="return confirm('Buyurtmani bekor qilib {{ order.points_spent }} ballni qaytarmoqchimisiz?');">
+              Bekor qilish
+            </button>
+            {% elif order.status == 'approved' %}
+            <button type="submit" name="status" value="delivered" class="btn btn-success" style="font-size:11px;padding:4px 8px;">
+              Topshirish
+            </button>
+            <button type="submit" name="status" value="cancelled" class="btn btn-danger" style="font-size:11px;padding:4px 8px;" onclick="return confirm('Buyurtmani bekor qilib {{ order.points_spent }} ballni qaytarmoqchimisiz?');">
+              Bekor qilish
+            </button>
+            {% elif order.status == 'delivered' %}
+            <span style="font-size:12px;color:#10b981;font-weight:600;">✓ Yakunlandi</span>
+            {% elif order.status == 'cancelled' %}
+            <span style="font-size:12px;color:#ef4444;font-weight:600;">Ball qaytarildi</span>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:48px;text-align:center;color:#94a3b8;">
+    Hozircha hech qanday buyurtma mavjud emas.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

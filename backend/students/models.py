@@ -87,3 +87,55 @@ class Payment(models.Model):
         if days <= 3:
             return f"Due in {days} days"
         return f"Next due in {days} days"
+
+
+class MarketItem(models.Model):
+    ITEM_TYPES = [
+        ("product", "Mahsulot (Product)"),
+        ("discount", "Kurs uchun chegirma (Course Discount)"),
+    ]
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="market_items")
+    title = models.CharField(max_length=255)
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES, default="product")
+    points_cost = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField(default=1)
+    discount_percent = models.PositiveIntegerField(null=True, blank=True, help_text="Percentage discount for courses (e.g. 10)")
+    image = models.ImageField(upload_to="market/", null=True, blank=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.points_cost} pts)"
+
+    def get_image_display_url(self):
+        if self.image:
+            return self.image.url
+        if self.image_url:
+            return self.image_url
+        return None
+
+
+class MarketOrder(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Kutilmoqda"),
+        ("approved", "Tasdiqlandi"),
+        ("delivered", "Topshirildi"),
+        ("cancelled", "Bekor qilindi"),
+    ]
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="market_orders")
+    item = models.ForeignKey(MarketItem, on_delete=models.CASCADE, related_name="orders")
+    points_spent = models.PositiveIntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.student.full_name} -> {self.item.title} ({self.status})"
+

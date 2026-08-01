@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %} — {{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    <div style="color:#64748b;font-size:14px;margin-top:4px;">
+      Do'konga yangi sovrin, fizik mahsulot yoki kurs chegirmasini kiritish
+    </div>
+  </div>
+  <a href="{% url 'market_items_list' %}" class="btn btn-ghost">← Orqaga</a>
+</div>
+
+<div style="max-width:600px;">
+  <div class="card" style="padding:28px;">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div style="margin-bottom:20px;">
+        <label class="label" for="title">Nomi / Sarlavhasi <span style="color:#ef4444;">*</span></label>
+        <input id="title" name="title" type="text"
+               placeholder="Masalan: AirPods Pro 2 yoki 20% Kurs Chegirmasi"
+               value="{{ item.title|default:'' }}"
+               class="input" required>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div>
+          <label class="label" for="item_type">Turi <span style="color:#ef4444;">*</span></label>
+          <select id="item_type" name="item_type" class="input" onchange="toggleDiscountField()">
+            <option value="product" {% if item and item.item_type == 'product' %}selected{% endif %}>📦 Mahsulot (AirPods, Ruchka, daftar...)</option>
+            <option value="discount" {% if item and item.item_type == 'discount' %}selected{% endif %}>🏷️ Kurs Chegirmasi</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="label" for="points_cost">Kerakli Ball (Narxi ⭐) <span style="color:#ef4444;">*</span></label>
+          <input id="points_cost" name="points_cost" type="number" min="1"
+                 placeholder="Masalan: 100"
+                 value="{{ item.points_cost|default:'50' }}"
+                 class="input" required>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div>
+          <label class="label" for="quantity">Soni (Qoldiq) <span style="color:#ef4444;">*</span></label>
+          <input id="quantity" name="quantity" type="number" min="0"
+                 placeholder="Masalan: 10"
+                 value="{{ item.quantity|default:'5' }}"
+                 class="input" required>
+        </div>
+
+        <div id="discount_wrapper" style="display:{% if item and item.item_type == 'discount' %}block{% else %}none{% endif %};">
+          <label class="label" for="discount_percent">Chegirma foizi (%)</label>
+          <input id="discount_percent" name="discount_percent" type="number" min="1" max="100"
+                 placeholder="Masalan: 15"
+                 value="{{ item.discount_percent|default:'' }}"
+                 class="input">
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label class="label" for="image">Rasm Yuklash (Fayl)</label>
+        <input id="image" name="image" type="file" accept="image/*" class="input" style="padding:6px 12px;">
+        {% if item and item.image %}
+        <div style="font-size:12px;color:#64748b;margin-top:4px;">
+          Joriy rasm: <a href="{{ item.image.url }}" target="_blank" style="color:#6366f1;">Ko'rish</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label class="label" for="image_url">Yoki Rasm URL havolasi</label>
+        <input id="image_url" name="image_url" type="url"
+               placeholder="https://example.com/image.png"
+               value="{{ item.image_url|default:'' }}"
+               class="input">
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label class="label" for="description">Tavsif (Batafsil ma'lumot)</label>
+        <textarea id="description" name="description" rows="3" class="input" placeholder="Mahsulot yoki chegirma haqida batafsil...">{{ item.description|default:'' }}</textarea>
+      </div>
+
+      {% if action == 'edit' %}
+      <div style="margin-bottom:24px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#334155;cursor:pointer;">
+          <input type="checkbox" name="is_active" {% if item.is_active %}checked{% endif %} style="width:18px;height:18px;accent-color:#6366f1;">
+          Do'konda faol ko'rinish
+        </label>
+      </div>
+      {% endif %}
+
+      <div style="display:flex;gap:12px;margin-top:28px;">
+        <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center;">
+          💾 Saqlash
+        </button>
+        <a href="{% url 'market_items_list' %}" class="btn btn-ghost">Bekor qilish</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleDiscountField() {
+  var type = document.getElementById('item_type').value;
+  var wrapper = document.getElementById('discount_wrapper');
+  if (type === 'discount') {
+    wrapper.style.display = 'block';
+  } else {
+    wrapper.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

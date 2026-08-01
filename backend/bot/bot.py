@@ -17,12 +17,16 @@ import django
 django.setup()
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from asgiref.sync import sync_to_async
+from django.db import transaction
+from datetime import date
 from users.models import Parent
+from students.models import MarketItem, MarketOrder, Student
+from attendance.models import Performance
 from students.services.stats import student_summary, get_period_range
 import os
 
@@ -50,10 +54,10 @@ def get_parent_children(telegram_id):
         return None, []
 
 
-# -- Inline keyboard for easy access --
+# -- Keyboard layout --
 def get_main_keyboard():
     kb = [
-        [KeyboardButton(text="📊 Statistika")],
+        [KeyboardButton(text="🛒 Do'kon"), KeyboardButton(text="📊 Statistika")],
         [KeyboardButton(text="/mystudents")]
     ]
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
@@ -69,7 +73,7 @@ async def cmd_start(message: Message):
     if created:
         text = (
             "✅ <b>Tizimga muvaffaqiyatli ulandingiz!</b>\n\n"
-            "Endi farzandingizning darsga qatnashishi va baholari haqida "
+            "Endi farzandingizning darsga qatnashishi, baholari va market xaridlari haqida "
             "avtomatik xabarnomalar olasiz.\n\n"
             f"🪪 <b>Sizning Telegram ID:</b> <code>{telegram_id}</code>\n\n"
             "📌 Ushbu ID-ni o'qituvchiga bering — u sizni tizimda farzandingizga bog'laydi."
@@ -154,6 +158,125 @@ async def cmd_stats(message: Message):
     await message.answer(text, parse_mode="HTML", reply_markup=get_main_keyboard())
 
 
+# -- MARKET / DO'KON FUNCTIONS --
+
+@sync_to_async
+def get_market_data_for_parent(telegram_id):
+    try:
+        parent = Parent.objects.get(telegram_id=telegram_id)
+        children = list(parent.children.all())
+        if not children:
+            return None, [], [], "ℹ️ Hali farzand bog'lanmagan."
+        items = list(MarketItem.objects.filter(is_active=True, quantity__gt=0).order_by("-created_at"))
+        if not items:
+            return parent, children, [], "🛒 Hozircha do'konda faol mahsulotlar yo'q."
+        return parent, children, items, None
+    except Parent.DoesNotExist:
+        return None, [], [], "❌ Siz tizimda ro'yxatdan o'tmagansiz.\n/start buyrug'ini yuboring."
+
+
+@sync_to_async
+def process_market_purchase(telegram_id, item_id, child_id):
+    try:
+        parent = Parent.objects.get(telegram_id=telegram_id)
+        student = parent.children.filter(id=child_id).first()
+        if not student:
+            return False, "❌ Farzand topilmadi."
+
+        with transaction.atomic():
+            student = Student.objects.select_for_update().get(pk=student.id)
+            item = MarketItem.objects.select_for_update().get(pk=item_id)
+
+            if not item.is_active or item.quantity <= 0:
+                return False, f"❌ Kechirasiz, '{item.title}' tugab qoldi."
+
+            if student.total_points < item.points_cost:
+                return False, f"❌ Yetarli ball yo'q!\n\nFarzandingizda: <b>{student.total_points} ⭐</b>\nMahsulot narxi: <b>{item.points_cost} ⭐</b>"
+
+            # Deduct points & reduce stock quantity
+            student.total_points -= item.points_cost
+            student.save()
+
+            item.quantity -= 1
+            item.save()
+
+            # Create market order
+            MarketOrder.objects.create(
+                student=student,
+                item=item,
+                points_spent=item.points_cost,
+                status="pending"
+            )
+
+            # Create Performance record (logs deduction in points history)
+            Performance.objects.create(
+                student=student,
+                teacher=item.teacher,
+                points=-item.points_cost,
+                comment=f"🛒 Do'kon xaridi: {item.title}",
+                date=date.today()
+            )
+
+            success_msg = (
+                f"🎉 <b>MUVAFFAQIYATLI XARID!</b>\n\n"
+                f"Farzandingiz <b>{student.full_name}</b> "
+                f"\"{item.title}\" mahsulotini <b>{item.points_cost} ⭐</b> ga xarid qildi!\n\n"
+                f"⭐ Qolgan ballari: <b>{student.total_points} ⭐</b>\n\n"
+                f"📌 O'qituvchiga (saytda) bildirishnoma yuborildi. Topshirilgach o'qituvchi holatni o'zgartiradi."
+            )
+            return True, success_msg
+    except Exception as e:
+        return False, f"❌ Xatolik yuz berdi: {str(e)}"
+
+
+@dp.message(Command("market"))
+@dp.message(lambda msg: msg.text == "🛒 Do'kon")
+async def cmd_market(message: Message):
+    parent, children, items, err = await get_market_data_for_parent(message.from_user.id)
+    if err:
+        await message.answer(err, parse_mode="HTML", reply_markup=get_main_keyboard())
+        return
+
+    text_lines = ["🛒 <b>GAMIFICATION DO'KONI (MARKET)</b>\n"]
+    for child in children:
+        text_lines.append(f"👤 <b>{child.full_name}</b>: {child.total_points} ⭐")
+
+    text_lines.append("\n🎁 <b>Mavjud Mahsulot va Chegirmalar:</b>\n")
+
+    inline_keyboard_rows = []
+    for item in items:
+        icon = "🏷️" if item.item_type == "discount" else "📦"
+        discount_info = f" ({item.discount_percent}% chegirma)" if item.discount_percent else ""
+        text_lines.append(
+            f"{icon} <b>{item.title}</b>{discount_info}\n"
+            f"   Narxi: <b>{item.points_cost} ⭐</b> | Qoldiq: {item.quantity} ta\n"
+        )
+        for child in children:
+            btn_text = f"Xarid qilish: {item.title} ({item.points_cost} ⭐)"
+            if len(children) > 1:
+                btn_text = f"{child.full_name}: {item.title} ({item.points_cost} ⭐)"
+            inline_keyboard_rows.append([
+                InlineKeyboardButton(
+                    text=btn_text,
+                    callback_data=f"buy_item:{item.id}:{child.id}"
+                )
+            ])
+
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_rows)
+    await message.answer("\n".join(text_lines), parse_mode="HTML", reply_markup=reply_markup)
+
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("buy_item:"))
+async def process_buy_callback(callback_query: CallbackQuery):
+    parts = callback_query.data.split(":")
+    item_id = int(parts[1])
+    child_id = int(parts[2])
+
+    success, msg = await process_market_purchase(callback_query.from_user.id, item_id, child_id)
+    await callback_query.answer()
+    await callback_query.message.answer(msg, parse_mode="HTML", reply_markup=get_main_keyboard())
+
+
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     await message.answer(
@@ -162,6 +285,7 @@ async def cmd_help(message: Message):
         "/id — Telegram ID-ingizni ko'rish\n"
         "/mystudents — Farzandlaringizni ko'rish\n"
         "/stats — 📊 Statistika ko'rish\n"
+        "/market — 🛒 Do'kon (Gamification)\n"
         "/help — Yordam",
         parse_mode="HTML",
     )
@@ -171,7 +295,7 @@ async def main():
     while True:
         try:
             print("🤖 Bot ishga tushdi...")
-            await dp.start_polling(bot, allowed_updates=["message"])
+            await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
         except Exception as e:
             print(f"Bot crashed: {e}")
             await asyncio.sleep(5)
@@ -179,3 +303,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
