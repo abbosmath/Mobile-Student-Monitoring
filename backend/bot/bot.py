@@ -32,7 +32,8 @@ import os
 
 load_dotenv()
 
-bot = Bot(token="8725934017:AAHFOIn41bvQi51mwtVnggcKIi1gZTDPzAw")
+BOT_TOKEN = os.getenv("BOT_TOKEN", getattr(settings, "BOT_TOKEN", ""))
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 

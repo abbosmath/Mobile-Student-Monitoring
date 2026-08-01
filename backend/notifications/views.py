@@ -10,7 +10,8 @@ from users.models import Parent
 
 logger = logging.getLogger(__name__)
 
-bot = Bot(token="8725934017:AAHFOIn41bvQi51mwtVnggcKIi1gZTDPzAw")
+token = getattr(settings, "BOT_TOKEN", "")
+bot = Bot(token=token) if token else None
 
 
 async def process_update(update_data: dict):
