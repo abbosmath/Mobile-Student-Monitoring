@@ -92,12 +92,24 @@ def get_available_tests_for_parent(telegram_id):
             return None, [], [], "ℹ️ Hali farzand bog'lanmagan."
 
         group_ids = list(GroupMembership.objects.filter(student__in=children).values_list("group_id", flat=True))
-        tests = list(Test.objects.filter(group_id__in=group_ids, is_active=True).select_related("group").order_by("-created_at"))
+        raw_tests = list(Test.objects.filter(group_id__in=group_ids, is_active=True).select_related("group").order_by("-created_at"))
 
-        if not tests:
+        if not raw_tests:
             return parent, children, [], "📝 Hozircha faol guruh testlari mavjud emas."
 
-        submissions = list(TestSubmission.objects.filter(student__in=children, test__in=tests))
+        tests = []
+        for t in raw_tests:
+            tests.append({
+                "id": t.id,
+                "title": t.title,
+                "group_name": t.group.name,
+                "question_count": t.questions.count(),
+                "deadline": t.deadline,
+                "time_limit_minutes": t.time_limit_minutes,
+            })
+
+        test_ids = [t["id"] for t in tests]
+        submissions = list(TestSubmission.objects.filter(student__in=children, test_id__in=test_ids))
         sub_map = {(s.student_id, s.test_id): s for s in submissions}
 
         return parent, children, tests, (sub_map, None)
@@ -187,27 +199,27 @@ async def cmd_tests(message: Message):
 
     inline_keyboard_rows = []
     for test in tests:
-        q_cnt = test.question_count()
-        deadline_text = test.deadline.strftime('%d.%m.%Y %H:%M') if test.deadline else "Cheklovsiz"
-        duration_text = f"{test.time_limit_minutes} daqiqa" if test.time_limit_minutes > 0 else "Cheklovsiz"
+        q_cnt = test["question_count"]
+        deadline_text = test["deadline"].strftime('%d.%m.%Y %H:%M') if test["deadline"] else "Cheklovsiz"
+        duration_text = f"{test['time_limit_minutes']} daqiqa" if test['time_limit_minutes'] > 0 else "Cheklovsiz"
 
         lines.append(
-            f"📋 <b>{test.title}</b> ({test.group.name})\n"
+            f"📋 <b>{test['title']}</b> ({test['group_name']})\n"
             f"   Savollar: <b>{q_cnt} ta</b> | Vaqt: <b>{duration_text}</b> | Deadline: <b>{deadline_text}</b>\n"
         )
 
         for child in children:
-            sub = sub_map.get((child.id, test.id))
+            sub = sub_map.get((child.id, test["id"]))
             if sub:
                 lines.append(f"   ✓ <i>{child.full_name} topshirgan: {sub.score}/{sub.total_questions} ball</i>\n")
             else:
-                btn_text = f"▶️ Testni boshlash ({test.title})"
+                btn_text = f"▶️ Testni boshlash ({test['title']})"
                 if len(children) > 1:
-                    btn_text = f"▶️ {child.full_name}: {test.title}"
+                    btn_text = f"▶️ {child.full_name}: {test['title']}"
                 inline_keyboard_rows.append([
                     InlineKeyboardButton(
                         text=btn_text,
-                        callback_data=f"start_test:{test.id}:{child.id}"
+                        callback_data=f"start_test:{test['id']}:{child.id}"
                     )
                 ])
 
