@@ -72,10 +72,12 @@ def get_parent_children(telegram_id):
 # -- Keyboard layout --
 def get_main_keyboard():
     kb = [
-        [KeyboardButton(text="📝 Testlar"), KeyboardButton(text="🛒 Do'kon")],
-        [KeyboardButton(text="📊 Statistika"), KeyboardButton(text="/mystudents")]
+        [KeyboardButton(text="📝 Testlar"), KeyboardButton(text="🏆 Reyting")],
+        [KeyboardButton(text="🛒 Do'kon"), KeyboardButton(text="📊 Statistika")],
+        [KeyboardButton(text="/mystudents")]
     ]
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+
 
 
 # -- TEST FUNCTIONS FOR PUPILS --
@@ -663,6 +665,74 @@ async def process_buy_callback(callback_query: CallbackQuery):
     await callback_query.message.answer(msg, parse_mode="HTML", reply_markup=get_main_keyboard())
 
 
+@sync_to_async
+def get_group_leaderboard_for_parent(telegram_id):
+    try:
+        parent = Parent.objects.get(telegram_id=telegram_id)
+        children = list(parent.children.all())
+        if not children:
+            return None, "ℹ️ Hali farzand bog'lanmagan."
+
+        child_ids = set(c.id for c in children)
+        memberships = GroupMembership.objects.filter(student__in=children).select_related("group")
+        if not memberships.exists():
+            return parent, "ℹ️ Farzandlaringiz hali biror guruhga biriktirilmagan."
+
+        groups = list(set(m.group for m in memberships))
+        response_lines = ["🏆 <b>GURUH REYTINGI (LEADERBOARD)</b>\n"]
+
+        for group in groups:
+            response_lines.append(f"👥 <b>Guruh: {group.name}</b> ({group.subject})")
+
+            group_members = list(
+                GroupMembership.objects.filter(group=group)
+                .select_related("student")
+                .order_by("-student__total_points", "student__full_name")
+            )
+
+            if not group_members:
+                response_lines.append("   <i>Guruhda o'quvchilar yo'q</i>\n")
+                continue
+
+            for rank_idx, m in enumerate(group_members, start=1):
+                st = m.student
+                is_my_child = st.id in child_ids
+
+                if rank_idx == 1:
+                    rank_icon = "🥇"
+                elif rank_idx == 2:
+                    rank_icon = "🥈"
+                elif rank_idx == 3:
+                    rank_icon = "🥉"
+                else:
+                    rank_icon = f"<b>#{rank_idx}</b>"
+
+                my_tag = " 👈 <b>(Siz)</b>" if is_my_child else ""
+
+                if is_my_child:
+                    response_lines.append(
+                        f"{rank_icon} <b>{st.full_name}</b> — <b>{st.total_points} ⭐</b>{my_tag}"
+                    )
+                else:
+                    response_lines.append(
+                        f"{rank_icon} {st.full_name} — <b>{st.total_points} ⭐</b>"
+                    )
+
+            response_lines.append("")
+
+        response_lines.append("📌 <i>Yuqoriroq o'ringa ko'tarilish uchun darslarda faol bo'ling va testlarni topshiring!</i>")
+        return parent, "\n".join(response_lines)
+
+    except Parent.DoesNotExist:
+        return None, "❌ Siz tizimda ro'yxatdan o'tmagansiz.\n/start buyrug'ini yuboring."
+
+
+@dp.message(or_f(Command("rating"), Command("leaderboard"), F.text == "🏆 Reyting", F.text.contains("Reyting")))
+async def cmd_rating(message: Message):
+    parent, text = await get_group_leaderboard_for_parent(message.from_user.id)
+    await message.answer(text, parse_mode="HTML", reply_markup=get_main_keyboard())
+
+
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     await message.answer(
@@ -670,6 +740,8 @@ async def cmd_help(message: Message):
         "/start — Tizimga ulanish\n"
         "/id — Telegram ID-ingizni ko'rish\n"
         "/mystudents — Farzandlaringizni ko'rish\n"
+        "/tests — 📝 Testlar (Onlayn Imtihonlar)\n"
+        "/rating — 🏆 Guruh Reytingi (Leaderboard)\n"
         "/stats — 📊 Statistika ko'rish\n"
         "/market — 🛒 Do'kon (Gamification)\n"
         "/help — Yordam",
