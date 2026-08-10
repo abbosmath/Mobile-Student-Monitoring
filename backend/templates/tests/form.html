@@ -103,8 +103,8 @@ function addQuestion() {
     </div>
 
     <div style="margin-bottom:12px;">
-      <label class="label" style="font-size:13px;">Savol matni:</label>
-      <input type="text" name="question_text[]" class="input" placeholder="Savol matnini kiriting..." required style="background:white;">
+      <label class="label" style="font-size:13px;">Savol matni (Rasm yuklansa ixtiyoriy):</label>
+      <input type="text" name="question_text[]" class="input" placeholder="Savol matnini kiriting (rasm bo'lmasa majburiy)..." style="background:white;">
     </div>
 
     <!-- Question Image Upload -->
@@ -165,6 +165,30 @@ function removeQuestion(qIdx) {
 document.addEventListener("DOMContentLoaded", function() {
   addQuestion();
   addQuestion();
+
+  document.getElementById('testForm').addEventListener('submit', function(e) {
+    const cards = document.querySelectorAll('.question-card');
+    if (cards.length === 0) {
+      alert("Kamida 1 ta savol qo'shing!");
+      e.preventDefault();
+      return;
+    }
+
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      const qText = card.querySelector('input[name="question_text[]"]').value.trim();
+      const fileInput = card.querySelector('input[type="file"]');
+      const urlInput = card.querySelector('input[type="url"]').value.trim();
+      const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+      if (!qText && !hasFile && !urlInput) {
+        alert(`Savol #${i + 1} uchun savol matnini kiriting yoki rasm yuklang!`);
+        card.querySelector('input[name="question_text[]"]').focus();
+        e.preventDefault();
+        return;
+      }
+    }
+  });
 });
 </script>
 {% endblock %}

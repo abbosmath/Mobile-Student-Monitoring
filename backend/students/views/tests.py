@@ -69,11 +69,11 @@ def test_create(request):
             question_texts = request.POST.getlist("question_text[]")
             for q_idx, q_text in enumerate(question_texts):
                 q_text = q_text.strip()
-                if not q_text:
-                    continue
-
                 q_image = request.FILES.get(f"question_image_{q_idx}")
                 q_image_url = request.POST.get(f"question_image_url_{q_idx}", "").strip() or None
+
+                if not q_text and not q_image and not q_image_url:
+                    continue
 
                 question = TestQuestion.objects.create(
                     test=test,

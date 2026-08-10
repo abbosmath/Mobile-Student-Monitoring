@@ -331,9 +331,9 @@ async def send_next_question_message(message: Message, user_id: int):
         return
 
     q = questions[idx]
+    q_title = f"\n\n<b>{q['text']}</b>" if q['text'] else ""
     text = (
-        f"📝 <b>Savol {idx + 1} / {len(questions)}:</b>\n\n"
-        f"<b>{q['text']}</b>"
+        f"📝 <b>Savol {idx + 1} / {len(questions)}:</b>{q_title}"
     )
 
     opt_labels = ["A", "B", "C", "D", "E", "F"]
@@ -404,7 +404,7 @@ async def process_answer_callback(callback_query: CallbackQuery):
 
     session["responses"].append({
         "question_num": q_idx + 1,
-        "question_text": q["text"],
+        "question_text": q["text"] if q["text"] else f"Savol #{q_idx + 1}",
         "selected_text": selected_opt["text"] if selected_opt else "Javob berilmadi",
         "correct_text": correct_opt["text"] if correct_opt else "—",
         "is_correct": is_correct,
