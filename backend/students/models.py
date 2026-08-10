@@ -170,6 +170,8 @@ class Test(models.Model):
 class TestQuestion(models.Model):
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="questions")
     question_text = models.TextField()
+    image = models.ImageField(upload_to="test_questions/", null=True, blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True)
     points = models.PositiveIntegerField(default=1, help_text="Har bir to'g'ri javob uchun beriladigan ball")
     order = models.PositiveIntegerField(default=1)
 
@@ -178,6 +180,13 @@ class TestQuestion(models.Model):
 
     def __str__(self):
         return f"Q{self.order}: {self.question_text[:30]}"
+
+    def get_image_display_url(self):
+        if self.image:
+            return self.image.url
+        if self.image_url:
+            return self.image_url
+        return None
 
 
 class TestOption(models.Model):

@@ -119,6 +119,16 @@ def get_available_tests_for_parent(telegram_id):
         return None, [], [], "❌ Siz tizimda ro'yxatdan o'tmagansiz.\n/start buyrug'ini yuboring."
 
 
+def get_full_question_image_url(q):
+    url = q.get_image_display_url()
+    if not url:
+        return None
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    domain = os.getenv("HOST_DOMAIN", "https://student-monitoring-production.up.railway.app")
+    return f"{domain.rstrip('/')}{url}"
+
+
 @sync_to_async
 def load_test_details(test_id, child_id):
     try:
@@ -138,9 +148,12 @@ def load_test_details(test_id, child_id):
         q_list = []
         for q in questions:
             opts = list(q.options.all())
+            img_path = q.image.path if (q.image and os.path.exists(q.image.path)) else None
             q_list.append({
                 "id": q.id,
                 "text": q.question_text,
+                "image_path": img_path,
+                "image_url": get_full_question_image_url(q),
                 "points": q.points,
                 "options": [{"id": opt.id, "text": opt.option_text, "is_correct": opt.is_correct} for opt in opts]
             })
@@ -335,7 +348,31 @@ async def send_next_question_message(message: Message, user_id: int):
         ])
 
     reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
-    await message.answer(text, parse_mode="HTML", reply_markup=reply_markup)
+
+    photo = None
+    if q.get("image_path"):
+        try:
+            photo = FSInputFile(q["image_path"])
+        except Exception:
+            photo = None
+
+    if not photo and q.get("image_url"):
+        img_url = q["image_url"]
+        photo = URLInputFile(img_url) if img_url.startswith("http") else img_url
+
+    if photo:
+        try:
+            await message.answer_photo(
+                photo=photo,
+                caption=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            print(f"[Bot question photo send error]: {e}")
+            await message.answer(text, parse_mode="HTML", reply_markup=reply_markup)
+    else:
+        await message.answer(text, parse_mode="HTML", reply_markup=reply_markup)
 
 
 @dp.callback_query(lambda c: c.data and c.data.startswith("ans_q:"))

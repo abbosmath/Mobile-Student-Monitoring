@@ -72,9 +72,14 @@ def test_create(request):
                 if not q_text:
                     continue
 
+                q_image = request.FILES.get(f"question_image_{q_idx}")
+                q_image_url = request.POST.get(f"question_image_url_{q_idx}", "").strip() or None
+
                 question = TestQuestion.objects.create(
                     test=test,
                     question_text=q_text,
+                    image=q_image,
+                    image_url=q_image_url,
                     points=1,
                     order=q_idx + 1,
                 )
