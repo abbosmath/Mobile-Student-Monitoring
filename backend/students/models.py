@@ -139,3 +139,68 @@ class MarketOrder(models.Model):
     def __str__(self):
         return f"{self.student.full_name} -> {self.item.title} ({self.status})"
 
+
+class Test(models.Model):
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="tests")
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="tests")
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    deadline = models.DateTimeField(null=True, blank=True)
+    time_limit_minutes = models.PositiveIntegerField(default=0, help_text="Test davomiyligi (daqiqalarda), 0 = cheklovsiz")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.group.name})"
+
+    def question_count(self):
+        return self.questions.count()
+
+    def is_expired(self):
+        if not self.deadline:
+            return False
+        from django.utils import timezone
+        return timezone.now() > self.deadline
+
+
+class TestQuestion(models.Model):
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="questions")
+    question_text = models.TextField()
+    points = models.PositiveIntegerField(default=1, help_text="Har bir to'g'ri javob uchun beriladigan ball")
+    order = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"Q{self.order}: {self.question_text[:30]}"
+
+
+class TestOption(models.Model):
+    question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE, related_name="options")
+    option_text = models.CharField(max_length=255)
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.option_text} ({'✓' if self.is_correct else '✗'})"
+
+
+class TestSubmission(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="test_submissions")
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="submissions")
+    score = models.PositiveIntegerField(default=0)
+    total_questions = models.PositiveIntegerField(default=0)
+    max_possible_points = models.PositiveIntegerField(default=0)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-completed_at"]
+        unique_together = ("student", "test")
+
+    def __str__(self):
+        return f"{self.student.full_name} -> {self.test.title}: {self.score}/{self.total_questions}"
+
+

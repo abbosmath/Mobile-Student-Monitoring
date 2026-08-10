@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %} — {{ test.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📝 {{ test.title }}</h1>
+    <div style="color:#64748b;font-size:14px;margin-top:4px;">
+      Guruh: <b>{{ test.group.name }}</b> | Yaratilgan: {{ test.created_at|date:"d.m.Y H:i" }}
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <a href="{% url 'test_results' test.id %}" class="btn btn-primary">
+      📊 Natijalarni Ko'rish ({{ submissions_count }}/{{ total_students }})
+    </a>
+    <a href="{% url 'tests_list' %}" class="btn btn-ghost">← Testlar Ro'yxatiga</a>
+  </div>
+</div>
+
+<!-- Test Specs Card -->
+<div class="card" style="padding:20px;margin-bottom:20px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;">
+    <div>
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Guruh</div>
+      <div style="font-size:16px;font-weight:700;color:#1e293b;">{{ test.group.name }}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Savollar Soni</div>
+      <div style="font-size:16px;font-weight:700;color:#6366f1;">{{ questions|length }} ta</div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Deadline (Muddati)</div>
+      <div style="font-size:16px;font-weight:700;color:#334155;">
+        {% if test.deadline %}{{ test.deadline|date:"d.m.Y H:i" }}{% else %}Cheklovsiz{% endif %}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Vaqt Cheklovi</div>
+      <div style="font-size:16px;font-weight:700;color:#334155;">
+        {% if test.time_limit_minutes > 0 %}{{ test.time_limit_minutes }} daqiqa{% else %}Cheklovsiz{% endif %}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Holati</div>
+      <div>
+        {% if test.is_expired %}
+          <span class="badge badge-absent">Muddati o'tgan</span>
+        {% else %}
+          <span class="badge badge-present">Faol</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% if test.description %}
+  <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9;font-size:14px;color:#475569;">
+    <b>Tavsif:</b> {{ test.description }}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Questions Preview -->
+<div class="card" style="padding:24px;">
+  <h3 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:16px;">❓ Savollar va To'g'ri Javoblar</h3>
+
+  {% if questions %}
+    {% for q in questions %}
+    <div style="padding:16px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:16px;background:#f8fafc;">
+      <div style="font-weight:700;color:#1e293b;font-size:15px;margin-bottom:10px;">
+        {{ forloop.counter }}. {{ q.question_text }}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        {% for opt in q.options.all %}
+        <div style="padding:8px 12px;border-radius:6px;font-size:14px;{% if opt.is_correct %}background:#d1fae5;color:#065f46;font-weight:700;border:1px solid #10b981;{% else %}background:white;color:#475569;border:1px solid #e2e8f0;{% endif %}">
+          {% if opt.is_correct %}✓ {% endif %}{{ opt.option_text }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div style="padding:20px;text-align:center;color:#94a3b8;">Ushbu testga savollar qo'shilmagan.</div>
+  {% endif %}
+</div>
+{% endblock %}

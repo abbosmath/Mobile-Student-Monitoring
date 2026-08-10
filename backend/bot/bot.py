@@ -71,10 +71,278 @@ def get_parent_children(telegram_id):
 # -- Keyboard layout --
 def get_main_keyboard():
     kb = [
-        [KeyboardButton(text="🛒 Do'kon"), KeyboardButton(text="📊 Statistika")],
-        [KeyboardButton(text="/mystudents")]
+        [KeyboardButton(text="📝 Testlar"), KeyboardButton(text="🛒 Do'kon")],
+        [KeyboardButton(text="📊 Statistika"), KeyboardButton(text="/mystudents")]
     ]
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+
+
+# -- TEST FUNCTIONS FOR PUPILS --
+
+USER_TEST_SESSIONS = {}
+
+
+@sync_to_async
+def get_available_tests_for_parent(telegram_id):
+    try:
+        parent = Parent.objects.get(telegram_id=telegram_id)
+        children = list(parent.children.all())
+        if not children:
+            return None, [], [], "ℹ️ Hali farzand bog'lanmagan."
+
+        group_ids = list(GroupMembership.objects.filter(student__in=children).values_list("group_id", flat=True))
+        tests = list(Test.objects.filter(group_id__in=group_ids, is_active=True).select_related("group").order_by("-created_at"))
+
+        if not tests:
+            return parent, children, [], "📝 Hozircha faol guruh testlari mavjud emas."
+
+        submissions = list(TestSubmission.objects.filter(student__in=children, test__in=tests))
+        sub_map = {(s.student_id, s.test_id): s for s in submissions}
+
+        return parent, children, tests, (sub_map, None)
+    except Parent.DoesNotExist:
+        return None, [], [], "❌ Siz tizimda ro'yxatdan o'tmagansiz.\n/start buyrug'ini yuboring."
+
+
+@sync_to_async
+def load_test_details(test_id, child_id):
+    try:
+        test = Test.objects.get(pk=test_id)
+        student = Student.objects.get(pk=child_id)
+        existing_sub = TestSubmission.objects.filter(student=student, test=test).first()
+        if existing_sub:
+            return None, None, f"✅ <b>{student.full_name}</b> ushbu testni allaqachon topshirgan!\nNatija: <b>{existing_sub.score} / {existing_sub.total_questions}</b> ball"
+
+        if test.is_expired():
+            return None, None, "❌ Ushbu testning topshirish muddati tugagan."
+
+        questions = list(test.questions.prefetch_related("options").all())
+        if not questions:
+            return None, None, "❌ Ushbu testda hali savollar mavjud emas."
+
+        q_list = []
+        for q in questions:
+            opts = list(q.options.all())
+            q_list.append({
+                "id": q.id,
+                "text": q.question_text,
+                "points": q.points,
+                "options": [{"id": opt.id, "text": opt.option_text, "is_correct": opt.is_correct} for opt in opts]
+            })
+
+        return test, student, (q_list, None)
+    except Exception as e:
+        return None, None, f"❌ Xatolik: {str(e)}"
+
+
+@sync_to_async
+def complete_test_submission(student_id, test_id, score, total_questions):
+    try:
+        with transaction.atomic():
+            student = Student.objects.select_for_update().get(pk=student_id)
+            test = Test.objects.get(pk=test_id)
+
+            sub, created = TestSubmission.objects.get_or_create(
+                student=student,
+                test=test,
+                defaults={
+                    "score": score,
+                    "total_questions": total_questions,
+                    "max_possible_points": total_questions,
+                }
+            )
+
+            if created and score > 0:
+                student.total_points += score
+                student.save()
+
+                Performance.objects.create(
+                    student=student,
+                    teacher=test.teacher,
+                    points=score,
+                    performance_type="exam",
+                    comment=f"📝 Test: {test.title} ({score}/{total_questions})",
+                    date=date.today()
+                )
+
+            return student, test, sub
+    except Exception as e:
+        print(f"[Test submission save error]: {e}")
+        return None, None, None
+
+
+@dp.message(or_f(Command("tests"), F.text == "📝 Testlar"))
+async def cmd_tests(message: Message):
+    parent, children, tests, result = await get_available_tests_for_parent(message.from_user.id)
+    if isinstance(result, str):
+        await message.answer(result, parse_mode="HTML", reply_markup=get_main_keyboard())
+        return
+
+    sub_map, _ = result
+    lines = ["📝 <b>TESTLAR VA ONLAYN IMTIHONLAR</b>\n"]
+    for child in children:
+        lines.append(f"👤 <b>{child.full_name}</b> (Joriy ball: {child.total_points} ⭐)")
+    lines.append("\n📌 <b>Mavjud guruh testlari:</b>\n")
+
+    inline_keyboard_rows = []
+    for test in tests:
+        q_cnt = test.question_count()
+        deadline_text = test.deadline.strftime('%d.%m.%Y %H:%M') if test.deadline else "Cheklovsiz"
+        duration_text = f"{test.time_limit_minutes} daqiqa" if test.time_limit_minutes > 0 else "Cheklovsiz"
+
+        lines.append(
+            f"📋 <b>{test.title}</b> ({test.group.name})\n"
+            f"   Savollar: <b>{q_cnt} ta</b> | Vaqt: <b>{duration_text}</b> | Deadline: <b>{deadline_text}</b>\n"
+        )
+
+        for child in children:
+            sub = sub_map.get((child.id, test.id))
+            if sub:
+                lines.append(f"   ✓ <i>{child.full_name} topshirgan: {sub.score}/{sub.total_questions} ball</i>\n")
+            else:
+                btn_text = f"▶️ Testni boshlash ({test.title})"
+                if len(children) > 1:
+                    btn_text = f"▶️ {child.full_name}: {test.title}"
+                inline_keyboard_rows.append([
+                    InlineKeyboardButton(
+                        text=btn_text,
+                        callback_data=f"start_test:{test.id}:{child.id}"
+                    )
+                ])
+
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_rows) if inline_keyboard_rows else None
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=reply_markup or get_main_keyboard())
+
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("start_test:"))
+async def process_start_test_callback(callback_query: CallbackQuery):
+    parts = callback_query.data.split(":")
+    test_id = int(parts[1])
+    child_id = int(parts[2])
+
+    test, student, data = await load_test_details(test_id, child_id)
+    if isinstance(data, str):
+        await callback_query.answer()
+        await callback_query.message.answer(data, parse_mode="HTML")
+        return
+
+    q_list, _ = data
+    user_id = callback_query.from_user.id
+
+    USER_TEST_SESSIONS[user_id] = {
+        "test_id": test_id,
+        "child_id": child_id,
+        "current_index": 0,
+        "questions": q_list,
+        "score": 0,
+    }
+
+    await callback_query.answer()
+    await send_next_question_message(callback_query.message, user_id)
+
+
+async def send_next_question_message(message: Message, user_id: int):
+    session = USER_TEST_SESSIONS.get(user_id)
+    if not session:
+        await message.answer("❌ Test sessiyasi topilmadi. Qaytadan /tests buyrug'ini yuboring.")
+        return
+
+    idx = session["current_index"]
+    questions = session["questions"]
+
+    if idx >= len(questions):
+        score = session["score"]
+        total_q = len(questions)
+        student_id = session["child_id"]
+        test_id = session["test_id"]
+
+        student, test, sub = await complete_test_submission(student_id, test_id, score, total_q)
+        USER_TEST_SESSIONS.pop(user_id, None)
+
+        if student and test:
+            res_text = (
+                f"🎉 <b>TEST YAKUNLANDI!</b>\n\n"
+                f"📋 Test: <b>{test.title}</b> ({test.group.name})\n"
+                f"👤 O'quvchi: <b>{student.full_name}</b>\n\n"
+                f"🎯 Natija: <b>{score} / {total_q}</b> to'g'ri javob!\n"
+                f"⭐ <b>+{score} ball</b> umumiy ballingizga qo'shildi!\n\n"
+                f"Joriy umumiy ballingiz: <b>{student.total_points} ⭐</b>\n"
+                f"📌 O'qituvchining veb-panelida natijangiz saqlandi."
+            )
+        else:
+            res_text = f"✅ Test yakunlandi! Natijangiz: <b>{score}/{total_q}</b>"
+
+        await message.answer(res_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+        return
+
+    q = questions[idx]
+    text = (
+        f"📝 <b>Savol {idx + 1} / {len(questions)}:</b>\n\n"
+        f"<b>{q['text']}</b>"
+    )
+
+    opt_labels = ["A", "B", "C", "D", "E", "F"]
+    keyboard_rows = []
+    for opt_i, opt in enumerate(q["options"]):
+        lbl = opt_labels[opt_i] if opt_i < len(opt_labels) else str(opt_i + 1)
+        keyboard_rows.append([
+            InlineKeyboardButton(
+                text=f"{lbl}) {opt['text']}",
+                callback_data=f"ans_q:{idx}:{opt['id']}"
+            )
+        ])
+
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
+    await message.answer(text, parse_mode="HTML", reply_markup=reply_markup)
+
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("ans_q:"))
+async def process_answer_callback(callback_query: CallbackQuery):
+    parts = callback_query.data.split(":")
+    q_idx = int(parts[1])
+    opt_id = int(parts[2])
+    user_id = callback_query.from_user.id
+
+    session = USER_TEST_SESSIONS.get(user_id)
+    if not session or session["current_index"] != q_idx:
+        await callback_query.answer("⚠️ Ushbu savolga allaqachon javob berilgan.")
+        return
+
+    q = session["questions"][q_idx]
+    for opt in q["options"]:
+        if opt["id"] == opt_id and opt["is_correct"]:
+            session["score"] += q["points"]
+            break
+
+    session["current_index"] += 1
+    await callback_query.answer()
+    await send_next_question_message(callback_query.message, user_id)
+
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("buy_item:"))
+async def process_buy_callback(callback_query: CallbackQuery):
+    parts = callback_query.data.split(":")
+    item_id = int(parts[1])
+    child_id = int(parts[2])
+
+    success, msg = await process_market_purchase(callback_query.from_user.id, item_id, child_id)
+    await callback_query.answer()
+    await callback_query.message.answer(msg, parse_mode="HTML", reply_markup=get_main_keyboard())
+
+
+@dp.message(Command("help"))
+async def cmd_help(message: Message):
+    await message.answer(
+        "📚 <b>Mavjud buyruqlar:</b>\n\n"
+        "/start — Tizimga ulanish\n"
+        "/id — Telegram ID-ingizni ko'rish\n"
+        "/mystudents — Farzandlaringizni ko'rish\n"
+        "/stats — 📊 Statistika ko'rish\n"
+        "/tests — 📝 Testlar (Onlayn Imtihonlar)\n"
+        "/market — 🛒 Do'kon (Gamification)\n"
+        "/help — Yordam",
+        parse_mode="HTML",
+    )
 
 
 @dp.message(Command("start"))

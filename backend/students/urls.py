@@ -18,6 +18,14 @@ from students.views.market import (
     market_order_update_status,
 )
 
+from students.views.tests import (
+    tests_list,
+    test_create,
+    test_detail,
+    test_results,
+    test_delete,
+)
+
 urlpatterns = [
     path("", groups_list, name="groups_list"),
     path("create/", group_create, name="group_create"),
@@ -34,5 +42,11 @@ urlpatterns = [
     path("market/<int:item_id>/delete/", market_item_delete, name="market_item_delete"),
     path("market/orders/", market_orders_list, name="market_orders_list"),
     path("market/orders/<int:order_id>/status/", market_order_update_status, name="market_order_update_status"),
+    path("tests/", tests_list, name="tests_list"),
+    path("tests/create/", test_create, name="test_create"),
+    path("tests/<int:test_id>/", test_detail, name="test_detail"),
+    path("tests/<int:test_id>/results/", test_results, name="test_results"),
+    path("tests/<int:test_id>/delete/", test_delete, name="test_delete"),
 ]
+
 

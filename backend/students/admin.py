@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Group, Student, GroupMembership, Schedule, MarketItem, MarketOrder
+from .models import Group, Student, GroupMembership, Schedule, MarketItem, MarketOrder, Test, TestQuestion, TestOption, TestSubmission
 
 
 @admin.register(Group)
@@ -27,4 +27,22 @@ class MarketItemAdmin(admin.ModelAdmin):
 class MarketOrderAdmin(admin.ModelAdmin):
     list_display = ["student", "item", "points_spent", "status", "created_at"]
     list_filter = ["status"]
+
+@admin.register(Test)
+class TestAdmin(admin.ModelAdmin):
+    list_display = ["title", "group", "teacher", "deadline", "time_limit_minutes", "is_active", "question_count"]
+    list_filter = ["group", "is_active"]
+
+@admin.register(TestQuestion)
+class TestQuestionAdmin(admin.ModelAdmin):
+    list_display = ["test", "order", "question_text", "points"]
+
+@admin.register(TestOption)
+class TestOptionAdmin(admin.ModelAdmin):
+    list_display = ["question", "option_text", "is_correct"]
+
+@admin.register(TestSubmission)
+class TestSubmissionAdmin(admin.ModelAdmin):
+    list_display = ["student", "test", "score", "total_questions", "completed_at"]
+
 

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %} — {{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    <div style="color:#64748b;font-size:14px;margin-top:4px;">
+      Guruh o'quvchilari uchun savollar, to'g'ri javoblar va vaqt cheklovini kiriting
+    </div>
+  </div>
+  <a href="{% url 'tests_list' %}" class="btn btn-ghost">← Orqaga</a>
+</div>
+
+<form method="post" id="testForm">
+  {% csrf_token %}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+    <!-- Main Info Card -->
+    <div class="card" style="padding:24px;">
+      <h3 style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:16px;">📌 Asosiy Ma'lumotlar</h3>
+
+      <div style="margin-bottom:16px;">
+        <label class="label" for="title">Test Nomi / Sarlavhasi <span style="color:#ef4444;">*</span></label>
+        <input id="title" name="title" type="text"
+               placeholder="Masalan: Matematika 1-bob: Tenglamalar testi"
+               class="input" required>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label class="label" for="group_id">Guruhni Tanlang <span style="color:#ef4444;">*</span></label>
+        <select id="group_id" name="group_id" class="input" required>
+          {% for g in groups %}
+          <option value="{{ g.id }}">{{ g.name }} ({{ g.subject }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="label" for="description">Tavsif (Ixtiyoriy)</label>
+        <textarea id="description" name="description" rows="2" class="input" placeholder="Test haqida qo'shimcha ko'rsatmalar..."></textarea>
+      </div>
+    </div>
+
+    <!-- Time & Restrictions Card -->
+    <div class="card" style="padding:24px;">
+      <h3 style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:16px;">⏱️ Vaqt va Muddat Cheklovlari</h3>
+
+      <div style="margin-bottom:16px;">
+        <label class="label" for="deadline">Topshirish Oxirgi Muddati (Deadline)</label>
+        <input id="deadline" name="deadline" type="datetime-local" class="input">
+        <div style="font-size:12px;color:#64748b;margin-top:4px;">Ushbu vaqtdan so'ng o'quvchilar testni ishlay olishmaydi. BO'SH qoldirilsa deadline yo'q bo'ladi.</div>
+      </div>
+
+      <div>
+        <label class="label" for="time_limit_minutes">Test Davomiyligi (Daqiqalarda)</label>
+        <input id="time_limit_minutes" name="time_limit_minutes" type="number" min="0" value="0" class="input">
+        <div style="font-size:12px;color:#64748b;margin-top:4px;">0 = Vaqt bo'yicha cheklovsiz. Masalan: 20 daqiqa kiritsangiz o'quvchiga 20 daqiqa beriladi.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Questions Builder Container -->
+  <div class="card" style="padding:24px;margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #f1f5f9;">
+      <div>
+        <h3 style="font-size:18px;font-weight:700;color:#1e293b;margin:0;">❓ Test Savollari va Variantlar</h3>
+        <div style="font-size:13px;color:#64748b;margin-top:2px;">Har bir to'g'ri javob uchun <b>1 ball</b> beriladi.</div>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="addQuestion()">
+        + Savol Qo'shish
+      </button>
+    </div>
+
+    <div id="questionsContainer">
+      <!-- Dynamic Questions will be inserted here -->
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;margin-bottom:40px;">
+    <button type="submit" class="btn btn-primary" style="padding:12px 28px;font-size:16px;">
+      💾 Testni Saqlash va Chop Etish
+    </button>
+    <a href="{% url 'tests_list' %}" class="btn btn-ghost">Bekor qilish</a>
+  </div>
+</form>
+
+<script>
+let questionCounter = 0;
+
+function addQuestion() {
+  const qIdx = questionCounter++;
+  const container = document.getElementById("questionsContainer");
+
+  const qCard = document.createElement("div");
+  qCard.className = "question-card";
+  qCard.id = `question_card_${qIdx}`;
+  qCard.style.cssText = "border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;background:#f8fafc;position:relative;";
+
+  qCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span style="font-weight:700;color:#6366f1;font-size:15px;">Savol #${qIdx + 1}</span>
+      <button type="button" class="btn btn-danger" style="font-size:12px;padding:3px 10px;" onclick="removeQuestion(${qIdx})">🗑️ O'chirish</button>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <input type="text" name="question_text[]" class="input" placeholder="Savol matnini kiriting..." required style="background:white;">
+    </div>
+
+    <div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:8px;">Javob variantlari (to'g'ri javobni tanlang):</div>
+    
+    <div id="options_container_${qIdx}" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="display:flex;align-items:center;gap:8px;background:white;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+        <input type="radio" name="correct_option_${qIdx}" value="0" checked style="width:16px;height:16px;accent-color:#10b981;">
+        <span style="font-weight:700;color:#64748b;">A)</span>
+        <input type="text" name="option_text_${qIdx}[]" class="input" placeholder="A varianti" required style="border:none;padding:4px;">
+      </div>
+      
+      <div style="display:flex;align-items:center;gap:8px;background:white;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+        <input type="radio" name="correct_option_${qIdx}" value="1" style="width:16px;height:16px;accent-color:#10b981;">
+        <span style="font-weight:700;color:#64748b;">B)</span>
+        <input type="text" name="option_text_${qIdx}[]" class="input" placeholder="B varianti" required style="border:none;padding:4px;">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;background:white;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+        <input type="radio" name="correct_option_${qIdx}" value="2" style="width:16px;height:16px;accent-color:#10b981;">
+        <span style="font-weight:700;color:#64748b;">C)</span>
+        <input type="text" name="option_text_${qIdx}[]" class="input" placeholder="C varianti" required style="border:none;padding:4px;">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;background:white;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+        <input type="radio" name="correct_option_${qIdx}" value="3" style="width:16px;height:16px;accent-color:#10b981;">
+        <span style="font-weight:700;color:#64748b;">D)</span>
+        <input type="text" name="option_text_${qIdx}[]" class="input" placeholder="D varianti" required style="border:none;padding:4px;">
+      </div>
+    </div>
+  `;
+
+  container.appendChild(qCard);
+}
+
+function removeQuestion(qIdx) {
+  const card = document.getElementById(`question_card_${qIdx}`);
+  if (card) {
+    card.remove();
+  }
+}
+
+// Add first 2 questions by default
+document.addEventListener("DOMContentLoaded", function() {
+  addQuestion();
+  addQuestion();
+});
+</script>
+{% endblock %}
