@@ -296,13 +296,12 @@ async def send_next_question_message(message: Message, user_id: int):
                 if item["is_correct"]:
                     summary_lines.append(
                         f"<b>{item['question_num']}. {item['question_text']}</b>\n"
-                        f"✅ Sizning javobingiz: <i>{item['selected_text']}</i>\n"
+                        f"✅ Javobingiz: <i>{item['selected_text']}</i> (+1 ball)\n"
                     )
                 else:
                     summary_lines.append(
                         f"<b>{item['question_num']}. {item['question_text']}</b>\n"
-                        f"❌ Sizning javobingiz: <i>{item['selected_text']}</i>\n"
-                        f"💡 To'g'ri javob: <b>{item['correct_text']}</b>\n"
+                        f"❌ Javobingiz: <i>{item['selected_text']}</i> (0 ball)\n"
                     )
 
             summary_lines.append("----------------------------------------")
