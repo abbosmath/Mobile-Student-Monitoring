@@ -188,11 +188,16 @@ async def cmd_tests(message: Message):
     for test in tests:
         q_cnt = test.question_count()
         deadline_text = test.deadline.strftime('%d.%m.%Y %H:%M') if test.deadline else "Cheklovsiz"
-        duration_text = f"{test.time_limit_minutes} daqiqa" if test.time_limit_minutes > 0 else "Cheklovsiz"
+        if test.time_limit_minutes > 0:
+            time_text = f"{test.time_limit_minutes} daqiqa"
+        elif test.question_interval_seconds > 0:
+            time_text = f"{test.question_interval_seconds} sek/savol"
+        else:
+            time_text = "Cheklovsiz"
 
         lines.append(
             f"📋 <b>{test.title}</b> ({test.group.name})\n"
-            f"   Savollar: <b>{q_cnt} ta</b> | Vaqt: <b>{duration_text}</b> | Deadline: <b>{deadline_text}</b>\n"
+            f"   Savollar: <b>{q_cnt} ta</b> | Vaqt: <b>{time_text}</b> | Deadline: <b>{deadline_text}</b>\n"
         )
 
         for child in children:
@@ -235,6 +240,8 @@ async def process_start_test_callback(callback_query: CallbackQuery):
         "current_index": 0,
         "questions": q_list,
         "score": 0,
+        "interval_seconds": test.question_interval_seconds,
+        "question_start_time": time.time(),
     }
 
     await callback_query.answer()
@@ -275,9 +282,13 @@ async def send_next_question_message(message: Message, user_id: int):
         await message.answer(res_text, parse_mode="HTML", reply_markup=get_main_keyboard())
         return
 
+    # Update question start time
+    session["question_start_time"] = time.time()
+
     q = questions[idx]
+    interval_info = f"\n⏱️ <i>Savol intervali: {session['interval_seconds']} sekund</i>" if session.get("interval_seconds", 0) > 0 else ""
     text = (
-        f"📝 <b>Savol {idx + 1} / {len(questions)}:</b>\n\n"
+        f"📝 <b>Savol {idx + 1} / {len(questions)}:</b>{interval_info}\n\n"
         f"<b>{q['text']}</b>"
     )
 
@@ -308,14 +319,24 @@ async def process_answer_callback(callback_query: CallbackQuery):
         await callback_query.answer("⚠️ Ushbu savolga allaqachon javob berilgan.")
         return
 
-    q = session["questions"][q_idx]
-    for opt in q["options"]:
-        if opt["id"] == opt_id and opt["is_correct"]:
-            session["score"] += q["points"]
-            break
+    # Check question interval timeout if configured
+    interval_seconds = session.get("interval_seconds", 0)
+    start_time = session.get("question_start_time", time.time())
+    elapsed = time.time() - start_time
+
+    is_timed_out = (interval_seconds > 0 and elapsed > (interval_seconds + 3))
+
+    if is_timed_out:
+        await callback_query.answer("⏰ Savol uchun berilgan interval vaqti tugagan! Ball berilmadi.", show_alert=True)
+    else:
+        q = session["questions"][q_idx]
+        for opt in q["options"]:
+            if opt["id"] == opt_id and opt["is_correct"]:
+                session["score"] += q["points"]
+                break
+        await callback_query.answer()
 
     session["current_index"] += 1
-    await callback_query.answer()
     await send_next_question_message(callback_query.message, user_id)
 
 

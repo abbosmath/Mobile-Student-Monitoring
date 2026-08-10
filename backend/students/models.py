@@ -147,6 +147,7 @@ class Test(models.Model):
     description = models.TextField(blank=True)
     deadline = models.DateTimeField(null=True, blank=True)
     time_limit_minutes = models.PositiveIntegerField(default=0, help_text="Test davomiyligi (daqiqalarda), 0 = cheklovsiz")
+    question_interval_seconds = models.PositiveIntegerField(default=0, help_text="Savollar orasidagi interval vaqti (sekundlarda), 0 = cheklovsiz")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

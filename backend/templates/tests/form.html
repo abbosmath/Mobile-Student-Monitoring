@@ -51,10 +51,16 @@
         <div style="font-size:12px;color:#64748b;margin-top:4px;">Ushbu vaqtdan so'ng o'quvchilar testni ishlay olishmaydi. BO'SH qoldirilsa deadline yo'q bo'ladi.</div>
       </div>
 
-      <div>
-        <label class="label" for="time_limit_minutes">Test Davomiyligi (Daqiqalarda)</label>
+      <div style="margin-bottom:16px;">
+        <label class="label" for="time_limit_minutes">Umumiy Test Davomiyligi (Daqiqalarda)</label>
         <input id="time_limit_minutes" name="time_limit_minutes" type="number" min="0" value="0" class="input">
-        <div style="font-size:12px;color:#64748b;margin-top:4px;">0 = Vaqt bo'yicha cheklovsiz. Masalan: 20 daqiqa kiritsangiz o'quvchiga 20 daqiqa beriladi.</div>
+        <div style="font-size:12px;color:#64748b;margin-top:4px;">0 = Vaqt bo'yicha cheklovsiz.</div>
+      </div>
+
+      <div>
+        <label class="label" for="question_interval_seconds">Savollar Orasidagi Interval Vaqti (Sekundlarda)</label>
+        <input id="question_interval_seconds" name="question_interval_seconds" type="number" min="0" value="0" class="input" placeholder="Masalan: 30">
+        <div style="font-size:12px;color:#64748b;margin-top:4px;">Har bir savolga ajratilgan vaqt/interval (sekundlarda). 0 = cheklovsiz.</div>
       </div>
     </div>
   </div>

@@ -34,9 +34,15 @@
       </div>
     </div>
     <div>
-      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Vaqt Cheklovi</div>
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Vaqt Cheklovi / Intervali</div>
       <div style="font-size:16px;font-weight:700;color:#334155;">
-        {% if test.time_limit_minutes > 0 %}{{ test.time_limit_minutes }} daqiqa{% else %}Cheklovsiz{% endif %}
+        {% if test.time_limit_minutes > 0 %}
+          {{ test.time_limit_minutes }} daqiqa (Umumiy)
+        {% elif test.question_interval_seconds > 0 %}
+          ⏱️ {{ test.question_interval_seconds }} sek/savol (Interval)
+        {% else %}
+          Cheklovsiz
+        {% endif %}
       </div>
     </div>
     <div>
