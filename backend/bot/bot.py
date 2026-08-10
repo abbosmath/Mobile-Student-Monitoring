@@ -153,7 +153,7 @@ def complete_test_submission(student_id, test_id, score, total_questions):
     try:
         with transaction.atomic():
             student = Student.objects.select_for_update().get(pk=student_id)
-            test = Test.objects.get(pk=test_id)
+            test = Test.objects.select_related("group").get(pk=test_id)
 
             sub, created = TestSubmission.objects.get_or_create(
                 student=student,
@@ -178,10 +178,17 @@ def complete_test_submission(student_id, test_id, score, total_questions):
                     date=date.today()
                 )
 
-            return student, test, sub
+            return {
+                "student_full_name": student.full_name,
+                "student_points": student.total_points,
+                "test_title": test.title,
+                "group_name": test.group.name,
+                "score": score,
+                "total_questions": total_questions,
+            }
     except Exception as e:
         print(f"[Test submission save error]: {e}")
-        return None, None, None
+        return None
 
 
 @dp.message(or_f(Command("tests"), F.text == "📝 Testlar", F.text.contains("Testlar")))
@@ -248,6 +255,7 @@ async def process_start_test_callback(callback_query: CallbackQuery):
         "current_index": 0,
         "questions": q_list,
         "score": 0,
+        "responses": [],
     }
 
     await callback_query.answer()
@@ -268,20 +276,40 @@ async def send_next_question_message(message: Message, user_id: int):
         total_q = len(questions)
         student_id = session["child_id"]
         test_id = session["test_id"]
+        responses = session.get("responses", [])
 
-        student, test, sub = await complete_test_submission(student_id, test_id, score, total_q)
+        res = await complete_test_submission(student_id, test_id, score, total_q)
         USER_TEST_SESSIONS.pop(user_id, None)
 
-        if student and test:
-            res_text = (
-                f"🎉 <b>TEST YAKUNLANDI!</b>\n\n"
-                f"📋 Test: <b>{test.title}</b> ({test.group.name})\n"
-                f"👤 O'quvchi: <b>{student.full_name}</b>\n\n"
-                f"🎯 Natija: <b>{score} / {total_q}</b> to'g'ri javob!\n"
-                f"⭐ <b>+{score} ball</b> umumiy ballingizga qo'shildi!\n\n"
-                f"Joriy umumiy ballingiz: <b>{student.total_points} ⭐</b>\n"
-                f"📌 O'qituvchining veb-panelida natijangiz saqlandi."
-            )
+        if res:
+            summary_lines = [
+                f"🎉 <b>TEST YAKUNLANDI!</b>\n",
+                f"📋 Test: <b>{res['test_title']}</b> ({res['group_name']})",
+                f"👤 O'quvchi: <b>{res['student_full_name']}</b>\n",
+                f"🎯 Natija: <b>{res['score']} / {res['total_questions']}</b> to'g'ri javob!",
+                f"⭐ <b>+{res['score']} ball</b> umumiy ballingizga qo'shildi!\n",
+                "----------------------------------------",
+                "📊 <b>SAVOLLAR TAHLILI:</b>\n"
+            ]
+
+            for item in responses:
+                if item["is_correct"]:
+                    summary_lines.append(
+                        f"<b>{item['question_num']}. {item['question_text']}</b>\n"
+                        f"✅ Sizning javobingiz: <i>{item['selected_text']}</i>\n"
+                    )
+                else:
+                    summary_lines.append(
+                        f"<b>{item['question_num']}. {item['question_text']}</b>\n"
+                        f"❌ Sizning javobingiz: <i>{item['selected_text']}</i>\n"
+                        f"💡 To'g'ri javob: <b>{item['correct_text']}</b>\n"
+                    )
+
+            summary_lines.append("----------------------------------------")
+            summary_lines.append(f"Joriy umumiy ballingiz: <b>{res['student_points']} ⭐</b>")
+            summary_lines.append("📌 O'qituvchining veb-panelida natijangiz saqlandi.")
+
+            res_text = "\n".join(summary_lines)
         else:
             res_text = f"✅ Test yakunlandi! Natijangiz: <b>{score}/{total_q}</b>"
 
@@ -322,10 +350,27 @@ async def process_answer_callback(callback_query: CallbackQuery):
         return
 
     q = session["questions"][q_idx]
+    selected_opt = None
+    correct_opt = None
+
     for opt in q["options"]:
-        if opt["id"] == opt_id and opt["is_correct"]:
-            session["score"] += q["points"]
-            break
+        if opt["id"] == opt_id:
+            selected_opt = opt
+        if opt["is_correct"]:
+            correct_opt = opt
+
+    is_correct = bool(selected_opt and selected_opt["is_correct"])
+
+    if is_correct:
+        session["score"] += q["points"]
+
+    session["responses"].append({
+        "question_num": q_idx + 1,
+        "question_text": q["text"],
+        "selected_text": selected_opt["text"] if selected_opt else "Javob berilmadi",
+        "correct_text": correct_opt["text"] if correct_opt else "—",
+        "is_correct": is_correct,
+    })
 
     session["current_index"] += 1
     await callback_query.answer()
