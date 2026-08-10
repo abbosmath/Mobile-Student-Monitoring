@@ -23,9 +23,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from asgiref.sync import sync_to_async
 from django.db import transaction
+import time
 from datetime import date
 from users.models import Parent
-from students.models import MarketItem, MarketOrder, Student
+from students.models import MarketItem, MarketOrder, Student, GroupMembership, Test, TestQuestion, TestOption, TestSubmission
 from attendance.models import Performance
 from students.services.stats import student_summary, get_period_range
 from django.conf import settings
@@ -171,7 +172,7 @@ def complete_test_submission(student_id, test_id, score, total_questions):
         return None, None, None
 
 
-@dp.message(or_f(Command("tests"), F.text == "📝 Testlar"))
+@dp.message(or_f(Command("tests"), F.text == "📝 Testlar", F.text.contains("Testlar")))
 async def cmd_tests(message: Message):
     parent, children, tests, result = await get_available_tests_for_parent(message.from_user.id)
     if isinstance(result, str):
@@ -433,7 +434,7 @@ def get_stats_for_parent(telegram_id):
         return None, "❌ Siz tizimda ro'yxatdan o'tmagansiz.\n/start buyrug'ini yuboring."
 
 
-@dp.message(or_f(Command("stats"), F.text == "📊 Statistika"))
+@dp.message(or_f(Command("stats"), F.text == "📊 Statistika", F.text.contains("Statistika")))
 async def cmd_stats(message: Message):
     parent, text = await get_stats_for_parent(message.from_user.id)
     await message.answer(text, parse_mode="HTML", reply_markup=get_main_keyboard())
@@ -520,7 +521,7 @@ def get_full_image_url(item):
     return f"{domain.rstrip('/')}{url}"
 
 
-@dp.message(or_f(Command("market"), F.text == "🛒 Do'kon"))
+@dp.message(or_f(Command("market"), F.text == "🛒 Do'kon", F.text.contains("Do'kon")))
 async def cmd_market(message: Message):
     parent, children, items, err = await get_market_data_for_parent(message.from_user.id)
     if err:
