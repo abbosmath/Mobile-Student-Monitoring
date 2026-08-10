@@ -30,7 +30,7 @@ class MarketOrderAdmin(admin.ModelAdmin):
 
 @admin.register(Test)
 class TestAdmin(admin.ModelAdmin):
-    list_display = ["title", "group", "teacher", "deadline", "time_limit_minutes", "question_interval_seconds", "is_active", "question_count"]
+    list_display = ["title", "group", "teacher", "deadline", "time_limit_minutes", "is_active", "question_count"]
     list_filter = ["group", "is_active"]
 
 @admin.register(TestQuestion)

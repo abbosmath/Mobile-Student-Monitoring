@@ -40,7 +40,6 @@ def test_create(request):
         description = request.POST.get("description", "").strip()
         deadline_str = request.POST.get("deadline", "").strip()
         time_limit_minutes = int(request.POST.get("time_limit_minutes", 0))
-        question_interval_seconds = int(request.POST.get("question_interval_seconds", 0))
 
         group = get_object_or_404(Group, id=group_id, teacher=teacher)
 
@@ -63,7 +62,6 @@ def test_create(request):
                 description=description,
                 deadline=deadline,
                 time_limit_minutes=time_limit_minutes,
-                question_interval_seconds=question_interval_seconds,
                 is_active=True,
             )
 
