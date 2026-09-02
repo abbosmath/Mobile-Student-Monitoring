@@ -11,6 +11,7 @@ urlpatterns = [
     path("students/", include("students.students_urls")),
     path("attendance/", include("attendance.urls")),
     path("bot/", include("notifications.urls")),
+    path("api/", include("api.urls")),
     re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
     path("", RedirectView.as_view(url="/groups/", permanent=False)),
 ]

@@ -1,0 +1,27 @@
+# Python & Django
+*.pyc
+__pycache__/
+*.sqlite3
+*.log
+.env
+venv/
+env/
+backend/db.sqlite3
+backend/check_users.py
+backend/setup_abbosmath.py
+backend/test_abbosmath_login.py
+backend/test_api.py
+
+# Flutter & Dart
+mobile_app/.dart_tool/
+mobile_app/.flutter-plugins
+mobile_app/.flutter-plugins-dependencies
+mobile_app/build/
+mobile_app/.pub-cache/
+mobile_app/.pub/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

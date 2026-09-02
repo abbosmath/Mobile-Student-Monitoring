@@ -29,9 +29,11 @@ INSTALLED_APPS = [
     "students",
     "attendance",
     "notifications",
+    "api",
 ]
 
 MIDDLEWARE = [
+    "api.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
