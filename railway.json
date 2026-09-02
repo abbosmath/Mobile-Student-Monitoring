@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python backend/manage.py migrate && (python backend/bot/bot.py &) && gunicorn --cd backend config.wsgi:application --bind 0.0.0.0:$PORT --workers 2",
+    "startCommand": "python backend/manage.py migrate && (python backend/bot/bot.py &) && gunicorn --chdir backend config.wsgi:application --bind 0.0.0.0:$PORT --workers 2",
     "restartPolicyType": "ON_FAILURE"
   }
 }
