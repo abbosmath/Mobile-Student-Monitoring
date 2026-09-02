@@ -45,7 +45,8 @@ _bot_lock_socket = _ensure_single_instance()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN") or getattr(settings, "BOT_TOKEN", "")
 if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN is not set in environment variables or settings!")
+    print("ℹ️ BOT_TOKEN is not set in environment variables. Telegram bot service disabled.")
+    sys.exit(0)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
