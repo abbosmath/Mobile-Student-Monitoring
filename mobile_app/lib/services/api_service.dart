@@ -36,33 +36,56 @@ class ApiService {
     };
   }
 
+  static Map<String, dynamic> _parseResponse(http.Response res) {
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      return {"data": decoded};
+    } catch (_) {
+      if (res.body.contains("rate limited") || res.statusCode == 429) {
+        return {"error": "Railway Server Rate Limited / Subscription Past Due."};
+      } else if (res.statusCode == 502 || res.body.contains("Bad Gateway")) {
+        return {"error": "Railway Server 502 Bad Gateway."};
+      }
+      return {"error": "Server response: ${res.body}"};
+    }
+  }
+
   // --- AUTHENTICATION ---
   static Future<Map<String, dynamic>> loginTeacher(String username, String password) async {
-    final url = Uri.parse("$baseUrl/auth/login/teacher/");
-    final res = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"username": username, "password": password}),
-    );
-    final data = jsonDecode(res.body);
-    if (res.statusCode == 200) {
-      await saveToken(data["token"], "teacher");
+    try {
+      final url = Uri.parse("$baseUrl/auth/login/teacher/");
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"username": username, "password": password}),
+      );
+      final data = _parseResponse(res);
+      if (res.statusCode == 200 && data.containsKey("token")) {
+        await saveToken(data["token"], "teacher");
+      }
+      return data;
+    } catch (e) {
+      return {"error": "Connection error: $e"};
     }
-    return data;
   }
 
   static Future<Map<String, dynamic>> loginStudent(String identifier) async {
-    final url = Uri.parse("$baseUrl/auth/login/student/");
-    final res = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"identifier": identifier}),
-    );
-    final data = jsonDecode(res.body);
-    if (res.statusCode == 200) {
-      await saveToken(data["token"], "student");
+    try {
+      final url = Uri.parse("$baseUrl/auth/login/student/");
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"identifier": identifier}),
+      );
+      final data = _parseResponse(res);
+      if (res.statusCode == 200 && data.containsKey("token")) {
+        await saveToken(data["token"], "student");
+      }
+      return data;
+    } catch (e) {
+      return {"error": "Connection error: $e"};
     }
-    return data;
   }
 
   static Future<Map<String, dynamic>> getMe() async {
