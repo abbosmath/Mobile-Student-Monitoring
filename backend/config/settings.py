@@ -12,10 +12,12 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")  # e.g. https://yourapp.railway.app
 
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "student-monitoring-production.up.railway.app"
+ALLOWED_HOSTS = ["*"]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.railway.app",
+    "https://student-monitoring-production.up.railway.app",
+    "https://mobile-student-monitoring-production.up.railway.app",
 ]
 
 INSTALLED_APPS = [
