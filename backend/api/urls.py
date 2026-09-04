@@ -2,6 +2,7 @@ from django.urls import path
 from api import views_auth, views_teacher, views_student
 
 urlpatterns = [
+    path("", views_auth.api_root_view, name="api_root"),
     # Auth
     path("auth/login/teacher/", views_auth.teacher_login_view, name="api_teacher_login"),
     path("auth/login/student/", views_auth.student_login_view, name="api_student_login"),

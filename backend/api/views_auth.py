@@ -8,6 +8,19 @@ from api.auth import generate_token, get_auth_payload, api_auth_required
 
 
 @csrf_exempt
+def api_root_view(request):
+    return JsonResponse({
+        "status": "ok",
+        "message": "Student Monitoring REST API is online!",
+        "endpoints": {
+            "teacher_login": "/api/auth/login/teacher/",
+            "student_login": "/api/auth/login/student/",
+            "me": "/api/auth/me/",
+        }
+    })
+
+
+@csrf_exempt
 def teacher_login_view(request):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
