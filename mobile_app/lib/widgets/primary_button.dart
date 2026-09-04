@@ -53,7 +53,7 @@ class PrimaryButton extends StatelessWidget {
                 ),
               )
             : Row(
-                mainAxisAlignment: MainCenter,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
                     Icon(icon, color: Colors.white, size: 20),

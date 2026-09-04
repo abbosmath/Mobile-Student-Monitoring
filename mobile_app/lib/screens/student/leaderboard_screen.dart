@@ -92,7 +92,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         child: ModernCard(
                           padding: const EdgeInsets.all(20),
                           child: Column(
-                            crossAxisAlignment: CrossAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -164,7 +164,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                       ),
                                       Text(
                                         "${r["total_points"]} ⭐",
-                                        style: const TextStyle(fontWeight: FontWeight.extrabold, color: Colors.amber, fontSize: 16),
+                                        style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.amber, fontSize: 16),
                                       ),
                                     ],
                                   ),

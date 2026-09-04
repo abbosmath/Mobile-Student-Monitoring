@@ -83,7 +83,7 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
             children: [
               Text(
                 "${result["score"]} / ${result["total_questions"]}",
-                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.extrabold, color: AppTheme.primary),
+                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: AppTheme.primary),
               ),
               const SizedBox(height: 4),
               const Text("To'g me'yoriy javoblar", style: TextStyle(color: AppTheme.textMuted)),
@@ -157,7 +157,7 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
                       const SizedBox(width: 6),
                       Text(
                         _formatTimer(_remainingSeconds),
-                        style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.extrabold, fontSize: 14),
+                        style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w800, fontSize: 14),
                       ),
                     ],
                   ),
@@ -169,7 +169,7 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Progress Bar
             ClipRRect(
@@ -208,7 +208,7 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
             ModernCard(
               padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (currentQuestion["image_url"] != null) ...[
                     ClipRRect(

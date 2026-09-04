@@ -58,7 +58,6 @@ class AppTheme {
         primary: primary,
         secondary: accent,
         surface: cardBg,
-        background: bgLight,
         error: danger,
       ),
       fontFamily: 'Roboto',
@@ -66,20 +65,11 @@ class AppTheme {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        scaffoldHeight: 64,
         iconTheme: IconThemeData(color: textDark),
         titleTextStyle: TextStyle(
           color: textDark,
           fontSize: 20,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-      cardTheme: CardTheme(
-        color: cardBg,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: border, width: 1),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

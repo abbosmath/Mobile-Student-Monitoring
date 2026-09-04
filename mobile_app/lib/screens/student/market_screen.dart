@@ -104,7 +104,7 @@ class _MarketScreenState extends State<MarketScreen> {
                         ),
                         Text(
                           "$_studentPoints ⭐",
-                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.extrabold),
+                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800),
                         ),
                       ],
                     ),
@@ -208,7 +208,7 @@ class _MarketScreenState extends State<MarketScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(o["item_title"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                       Text("-${o["points_spent"]} ⭐", style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),

@@ -87,14 +87,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           GradientCard(
             gradient: AppTheme.primaryGradient,
             child: Column(
-              crossAxisAlignment: CrossAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             "Salom, ${student["full_name"]} 👋",
@@ -134,7 +134,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       ),
                       Text(
                         "$totalPoints ⭐",
-                        style: const TextStyle(color: Colors.amberAccent, fontSize: 26, fontWeight: FontWeight.extrabold),
+                        style: const TextStyle(color: Colors.amberAccent, fontSize: 26, fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
@@ -193,7 +193,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 g["name"],

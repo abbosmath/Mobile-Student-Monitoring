@@ -165,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                     padding: const EdgeInsets.all(24),
                     child: Column(
-                      crossAxisAlignment: CrossAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Tab Selector
                         Container(
@@ -259,7 +259,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                               // Student Login Form
                               Column(
-                                crossAxisAlignment: CrossAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   TextField(
                                     controller: _studentIdCtrl,
