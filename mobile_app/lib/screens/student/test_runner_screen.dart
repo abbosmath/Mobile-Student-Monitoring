@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/custom_card.dart';
+import '../../widgets/primary_button.dart';
 
 class TestRunnerScreen extends StatefulWidget {
   final Map<String, dynamic> testData;
@@ -67,32 +70,44 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("🎉 Test Yakunlandi!", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Column(
+            children: [
+              Text("🎉", style: TextStyle(fontSize: 48)),
+              SizedBox(height: 8),
+              Text("Test Yakunlandi!", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 "${result["score"]} / ${result["total_questions"]}",
-                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.indigo),
+                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.extrabold, color: AppTheme.primary),
               ),
-              const SizedBox(height: 8),
-              const Text("To'g'ri javoblar soni"),
-              const SizedBox(height: 12),
-              Chip(
-                label: Text("+${result["score"]} Ball qo'shildi ⭐"),
-                backgroundColor: Colors.amber.shade100,
+              const SizedBox(height: 4),
+              const Text("To'g me'yoriy javoblar", style: TextStyle(color: AppTheme.textMuted)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  "+${result["score"]} Ball qo'shildi ⭐",
+                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ],
           ),
           actions: [
-            ElevatedButton(
+            PrimaryButton(
+              text: "Tugatish va Qaytish",
               onPressed: () {
                 Navigator.pop(ctx);
                 Navigator.pop(context);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
-              child: const Text("Tugatish"),
             ),
           ],
         ),
@@ -116,21 +131,35 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
     final selectedOptionId = _selectedAnswers[questionId];
 
     return Scaffold(
+      backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: Text(widget.testData["title"]),
-        backgroundColor: Colors.indigo.shade900,
-        foregroundColor: Colors.white,
+        title: Text(
+          widget.testData["title"],
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.textDark),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
         actions: [
           if (_remainingSeconds > 0)
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.red.shade700, borderRadius: BorderRadius.circular(8)),
-                  child: Text(
-                    _formatTimer(_remainingSeconds),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.danger.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.timer_outlined, color: AppTheme.danger, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatTimer(_remainingSeconds),
+                        style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.extrabold, fontSize: 14),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -138,57 +167,67 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAlignment.start,
           children: [
-            // Progress Indicator
-            LinearProgressIndicator(
-              value: (_currentIndex + 1) / questions.length,
-              backgroundColor: Colors.grey.shade200,
-              color: Colors.indigo.shade900,
+            // Progress Bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: (_currentIndex + 1) / questions.length,
+                minHeight: 8,
+                backgroundColor: AppTheme.border,
+                color: AppTheme.primary,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   "Savol ${_currentIndex + 1} / ${questions.length}",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textDark),
                 ),
-                Chip(label: Text("${currentQuestion["points"] ?? 1} ball")),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "${currentQuestion["points"] ?? 1} ball",
+                    style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
 
             // Question Card
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (currentQuestion["image_url"] != null) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          currentQuestion["image_url"],
-                          height: 160,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const SizedBox(),
-                        ),
+            ModernCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAlignment.start,
+                children: [
+                  if (currentQuestion["image_url"] != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.network(
+                        currentQuestion["image_url"],
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox(),
                       ),
-                      const SizedBox(height: 12),
-                    ],
-                    Text(
-                      currentQuestion["question_text"],
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
+                    const SizedBox(height: 14),
                   ],
-                ),
+                  Text(
+                    currentQuestion["question_text"],
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textDark, height: 1.4),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),
@@ -201,28 +240,53 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
                   final opt = options[idx];
                   final isSelected = selectedOptionId == opt["id"];
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    color: isSelected ? Colors.indigo.shade50 : Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isSelected ? Colors.indigo.shade900 : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isSelected ? Colors.indigo.shade900 : Colors.grey.shade200,
-                        foregroundColor: isSelected ? Colors.white : Colors.black,
-                        child: Text(String.fromCharCode(65 + idx)),
-                      ),
-                      title: Text(opt["option_text"], style: const TextStyle(fontSize: 16)),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: ModernCard(
                       onTap: () {
                         setState(() {
                           _selectedAnswers[questionId] = opt["id"];
                         });
                       },
+                      color: isSelected ? AppTheme.primary.withOpacity(0.08) : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? AppTheme.primary : AppTheme.border,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppTheme.primary : AppTheme.bgLight,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                String.fromCharCode(65 + idx),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? Colors.white : AppTheme.textDark,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              opt["option_text"],
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? AppTheme.primary : AppTheme.textDark,
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check_circle_rounded, color: AppTheme.primary, size: 22),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -231,30 +295,34 @@ class _TestRunnerScreenState extends State<TestRunnerScreen> {
 
             // Navigation Controls
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (_currentIndex > 0)
-                  OutlinedButton.icon(
-                    onPressed: () => setState(() => _currentIndex--),
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text("Oldingi"),
-                  )
-                else
-                  const SizedBox(),
-                if (_currentIndex < questions.length - 1)
-                  ElevatedButton.icon(
-                    onPressed: () => setState(() => _currentIndex++),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text("Keyingi"),
-                  )
-                else
-                  ElevatedButton.icon(
-                    onPressed: _isSubmitting ? null : _submitTest,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700, foregroundColor: Colors.white),
-                    icon: _isSubmitting ? const CircularProgressIndicator(color: Colors.white) : const Icon(Icons.check),
-                    label: const Text("Testni Yakunlash"),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => setState(() => _currentIndex--),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text("Oldingi", style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ),
+                if (_currentIndex > 0) const SizedBox(width: 12),
+                Expanded(
+                  child: _currentIndex < questions.length - 1
+                      ? PrimaryButton(
+                          text: "Keyingi",
+                          icon: Icons.arrow_forward_rounded,
+                          onPressed: () => setState(() => _currentIndex++),
+                        )
+                      : PrimaryButton(
+                          text: "Yakunlash",
+                          icon: Icons.check_circle_rounded,
+                          gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                          isLoading: _isSubmitting,
+                          onPressed: _submitTest,
+                        ),
+                ),
               ],
             ),
           ],

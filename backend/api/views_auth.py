@@ -21,6 +21,11 @@ def api_root_view(request):
 
 
 @csrf_exempt
+def ping_view(request):
+    return JsonResponse({"status": "pong"})
+
+
+@csrf_exempt
 def teacher_login_view(request):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)

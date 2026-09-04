@@ -4,6 +4,8 @@ import 'screens/login_screen.dart';
 import 'screens/teacher/teacher_home_screen.dart';
 import 'screens/student/student_home_screen.dart';
 
+import 'theme/app_theme.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const StudentMonitoringApp());
@@ -17,13 +19,7 @@ class StudentMonitoringApp extends StatelessWidget {
     return MaterialApp(
       title: 'Student Monitoring',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          primary: Colors.indigo.shade900,
-        ),
-      ),
+      theme: AppTheme.lightTheme,
       home: const AuthCheckScreen(),
     );
   }
