@@ -158,7 +158,7 @@ class _MarketScreenState extends State<MarketScreen> {
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment: CrossAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       item["title"],
