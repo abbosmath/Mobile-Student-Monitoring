@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Live Render production host (Zero Rate Limits)
-  static String baseUrl = "https://mobile-student-monitoring.onrender.com/api";
+  // Live Railway production host
+  static String baseUrl = "https://mobile-student-monitoring-production.up.railway.app/api";
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
