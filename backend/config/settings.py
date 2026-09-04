@@ -106,8 +106,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "/auth/login/"
 LOGIN_REDIRECT_URL = "/groups/"
-LOGOUT_REDIRECT_URL = "/auth/login/"
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://student-monitoring-production.up.railway.app",
-]
+LOGOUT_REDIRECT_URL = "/auth/login/"
