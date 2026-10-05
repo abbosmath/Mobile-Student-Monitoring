@@ -1,4 +1,5 @@
 import json
+import re
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
@@ -23,6 +24,40 @@ def api_root_view(request):
 @csrf_exempt
 def ping_view(request):
     return JsonResponse({"status": "pong"})
+
+
+@csrf_exempt
+def verify_telegram_view(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"success": False, "error": "method_not_allowed"},
+            status=405,
+        )
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse(
+            {"success": False, "error": "invalid_request"},
+            status=400,
+        )
+
+    telegram_id = data.get("telegram_id") if isinstance(data, dict) else None
+    if not isinstance(telegram_id, str) or not re.fullmatch(r"\d{10}", telegram_id):
+        return JsonResponse(
+            {"success": False, "error": "invalid_code"},
+            status=400,
+        )
+
+    if Parent.objects.filter(telegram_id=int(telegram_id)).exists():
+        return JsonResponse(
+            {"success": True, "telegram_id": telegram_id},
+        )
+
+    return JsonResponse(
+        {"success": False, "error": "invalid_code"},
+        status=400,
+    )
 
 
 @csrf_exempt

@@ -4,6 +4,7 @@ from api import views_auth, views_teacher, views_student
 urlpatterns = [
     path("", views_auth.api_root_view, name="api_root"),
     path("ping/", views_auth.ping_view, name="api_ping"),
+    path("verify-telegram/", views_auth.verify_telegram_view, name="api_verify_telegram"),
     # Auth
     path("auth/login/teacher/", views_auth.teacher_login_view, name="api_teacher_login"),
     path("auth/login/student/", views_auth.student_login_view, name="api_student_login"),
